@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 import pickle
+import csv
 
 FeatureDict = {"nEvent":0, "nParticle":1, "nLayer":2, "nModule":3, "nCluster":4, "pT_hadron":5, "pdgId":6, "decay_vx":7, "dR":8, "bTag":9, "pT_jet":10}
 
@@ -183,14 +184,14 @@ def Li_Lj_Hist1D(i, j, Bdatalist, Backgrounddata, bins, ran, dR, Difference=Fals
                 print "working on",Bdata[1]
                 B_zero_div = 0
                 B_else = 0
-		ntot = 0
-		npass = 0
+		ntot = 0.
+		npass = 0.
                 HistBlist.append(rt.TH1D(Bdata[1],title,bins,ran[0],ran[1]))
                 HistBlist[n].SetLineColor(n+3)
                 for particle in Bdata[0]:
-			ntot +=1
+			ntot +=1.
 			if (particle[0][0][5] < pT_hadron) or (particle[0][0][10] < pT_jet): continue
-                        npass += 1
+                        npass += 1.
 			if Difference:
 				if Abs:
                                 	L = abs(Li_Lj_diff(i,j,particle, dR, dR_check=dR_check))
@@ -255,7 +256,6 @@ def Li_Lj_Hist1D(i, j, Bdatalist, Backgrounddata, bins, ran, dR, Difference=Fals
                 print 'saved as discriminants/'+title+'.png'
 
 def CSV_Hist(Bdatalist, Backgrounddata, bins, pT_hadron=0,pT_jet=0, Save=False):
-	"""Creates a histogram of CSV b-tag values on signal data put in a datalist as tuples (data,title). pT_hadron and pT_jet can be used as additioinaö contraints."""
         ran = (0,1)
 	pT_string = ''
 	if pT_hadron>0: pT_string = pT_string+'_pTH_'+str(pT_hadron)
@@ -320,7 +320,7 @@ def Li_Lj_Hist2D(title,i,j,data,ran,dR,Save=False):
 		print 'saved as discriminants/L'+str(i)+'_L'+str(j)+'Hist_2D_DR'+str(dR)+title+'.png'
 	sleep(5)
 
-def Correlation_Hist2D(title, data, feature_x, feature_y, ran_x, ran_y, bins_x, bins_y,Save=False):
+def Correlation_Hist2D(title, data, feature_x, feature_y, ran_x, ran_y, bins_x, bins_y, Profiling=False, Save=False):
 	"""Creates a 2D histogram of features saved in the cluster matching function (see FeatureDict)"""
 	f_x, f_y = FeatureDict[feature_x], FeatureDict[feature_y]
 	Hist = rt.TH2I(title,title,bins_x,ran_x[0],ran_x[1],bins_y,ran_y[0],ran_y[1])
@@ -332,7 +332,10 @@ def Correlation_Hist2D(title, data, feature_x, feature_y, ran_x, ran_y, bins_x, 
         Hist.GetXaxis().SetTitle(feature_x)
         Hist.GetYaxis().SetTitle(feature_y)
         Hist.GetYaxis().SetTitleOffset(1.5)
-        Hist.Draw("COLZ")
+	if Profiling:
+		Hist.ProfileX().Draw("COLZ")
+	else:
+        	Hist.Draw("COLZ")
         if Save: 
 		canvas.SaveAs('analytic_plots/correlation_2D_'+title+'.png')
 		print 'saved as analytic_plots/correlation_2D_'+title+'.png'
@@ -523,15 +526,15 @@ def ROC_CutBased(title,signal_hist,background_hist,cutregion="above",zerodiv=(0,
 	if resolution == 0: cuts=range(int(ran[0]),int(ran[1]))
 	bin_ran = (signal_hist.GetXaxis().FindBin(ran[0]),signal_hist.GetXaxis().FindBin(ran[1]))
 	if cutregion == "above":
-		for cut in cuts:
+		for cut in cuts[::-1]:
 			bin_cut = signal_hist.GetXaxis().FindBin(cut)
 			signal_efficiency.append(signal_hist.Integral(bin_cut,bin_ran[1])/(signal_hist.Integral(bin_ran[0],bin_ran[1])+zerodiv[0]))
-			background_efficiency.append(1-background_hist.Integral(bin_cut,bin_ran[1])/(background_hist.Integral(bin_ran[0],bin_ran[1])+zerodiv[1])) 	
+			background_efficiency.append(1-(background_hist.Integral(bin_cut,bin_ran[1])/(background_hist.Integral(bin_ran[0],bin_ran[1])+zerodiv[1]))) 	
 	if cutregion == "below":
-		for cut in cuts:
+		for cut in cuts[::-1]:
 			bin_cut = signal_hist.GetXaxis().FindBin(cut)
 			signal_efficiency.append(signal_hist.Integral(bin_ran[0],bin_cut)/(signal_hist.Integral(bin_ran[0],bin_ran[1])+zerodiv[0]))
-			background_efficiency.append(1-background_hist.Integral(bin_ran[0],bin_cut)/(background_hist.Integral(bin_ran[0],bin_ran[1])+zerodiv[1])) 	
+			background_efficiency.append(1-(background_hist.Integral(bin_ran[0],bin_cut)/(background_hist.Integral(bin_ran[0],bin_ran[1])+zerodiv[1]))) 	
 	plt.plot(signal_efficiency,background_efficiency,'-',label=title)
 	diff = 1
 	closest = 0
@@ -707,6 +710,10 @@ def exclusive_tagged_jets_hist(signal_title, data, discriminant, dR, discriminan
 		CSV_and_not_Discriminant.Write()
 		Discriminant_and_CSV.Write()
 
+def RebinHist(hist,name):
+		import array
+		bins_ = array.array('d',[350.0, 387.5, 425.0, 462.5, 500.0, 537.5, 575.0, 612.5, 650.0, 687.5, 725.0, 762.5, 800.0, 837.5, 875.0, 912.5, 950.0, 987.5, 1025.0, 1100.0, 1200.0, 1400.0, 1600.0, 1800.0, 2100.0, 2500.0, 3000.0])
+		return 	hist.Rebin(len(bins_)-1,"rebinned_"+name,bins_)
 
 def Efficiency_vs_pT(title,histlist, hist_all_jets, feature,Save=False):
 	"""plots for each histogram of tagged jets given in a list of tuples (histogram, title) the efficiency for each bin, where the x-axis corresponds to the feature given as string (see FeatureDict)."""
@@ -728,6 +735,199 @@ def Efficiency_vs_pT(title,histlist, hist_all_jets, feature,Save=False):
 			graphlist[n].Draw("SAME")	
 	legend.Draw()
 	if Save: canvas.SaveAs(title+"_vs_"+feature+".png")
+
+def Make_ROC_histograms(title, data, dR_d, dR_r, pT_cut,Check=False):
+	diff_ran = (-25,25)
+	diff_bins = diff_ran[1]-diff_ran[0]
+	ratio_ran = (0,10)
+	ratio_bins = 60
+	Diff_hist = rt.TH1D("L4-L1","L4-L1",diff_bins,diff_ran[0],diff_ran[1])
+	Diff_hist_hadron_pT = rt.TH1D("L4-L1_pTH","L4-L1_pTH",diff_bins,diff_ran[0],diff_ran[1])
+	Diff_hist_jet_pT = rt.TH1D("L4-L1_pTJ","L4-L1_pTJ",diff_bins,diff_ran[0],diff_ran[1])
+	Ratio_hist = rt.TH1D("L4_L1","L4_L1",ratio_bins,ratio_ran[0],ratio_ran[1])
+	Ratio_hist_hadron_pT = rt.TH1D("L4_L1_pTH","L4_L1_pTH",ratio_bins,ratio_ran[0],ratio_ran[1])
+	Ratio_hist_jet_pT = rt.TH1D("L4_L1_pTJ","L4_L1_pTJ",ratio_bins,ratio_ran[0],ratio_ran[1])
+	CSV_hist = rt.TH1D("CSV","CSV",ratio_bins,0,1)
+	CSV_hist_hadron_pT = rt.TH1D("CSV_pTH","CSV_pTH",ratio_bins,0,1)
+	CSV_hist_jet_pT = rt.TH1D("CSV_pTJ","CSV_pTJ",ratio_bins,0,1)
+	
+	ZeroDiv, ZeroDiv_hadron, ZeroDiv_jet = 0,0,0
+	
+	for n,particle in enumerate(data):
+		L1_d,L1_r,L4_d,L4_r = 0,0,0,0
+		CSV = particle[0][0][9]
+		for cluster in particle:
+			if cluster[0][8] <= dR_r:
+				if cluster[0][2] == 1: L1_r += 1.
+				if cluster[0][2] == 4: L4_r += 1.
+				if cluster[0][8] <= dR_d:
+					if cluster[0][2] == 1: L1_d += 1
+					if cluster[0][2] == 4: L4_d += 1
+		Diff_hist.Fill(L4_d-L1_d)
+		CSV_hist.Fill(CSV)
+		if L1_r != 0:
+			Ratio_hist.Fill(L4_r/L1_r)
+		else:
+			ZeroDiv += 1
+		if particle[0][0][FeatureDict["pT_hadron"]] >= pT_cut:
+			Diff_hist_hadron_pT.Fill(L4_d-L1_d)
+			CSV_hist_hadron_pT.Fill(CSV)
+			if L1_r != 0:
+				Ratio_hist_hadron_pT.Fill(L4_r/L1_r)
+			else:
+				ZeroDiv_hadron += 1
+		if particle[0][0][FeatureDict["pT_jet"]] >= pT_cut:
+			Diff_hist_jet_pT.Fill(L4_d-L1_d)
+			CSV_hist_jet_pT.Fill(CSV)
+			if L1_r != 0:
+				Ratio_hist_jet_pT.Fill(L4_r/L1_r)
+			else:
+				ZeroDiv_jet += 1
+	tfile = rt.TFile("histogram_files/{}_histograms.root".format(title),"recreate")
+	Diff_hist.Write()				
+        Diff_hist_hadron_pT.Write()	
+        Diff_hist_jet_pT.Write()
+        Ratio_hist.Write()
+        Ratio_hist_hadron_pT.Write()
+	Ratio_hist_jet_pT.Write()
+	CSV_hist.Write()
+        CSV_hist_hadron_pT.Write()
+	CSV_hist_jet_pT.Write()
+	csv_file = open("histogram_files/{}_ZeroDiv.csv".format(title),"wb")
+	writer = csv.writer(csv_file)
+	writer.writerow([ZeroDiv,ZeroDiv_hadron,ZeroDiv_jet])
+	csv_file.close()
+	print "saved zero division occurences in histogram_files/{}_ZeroDiv.csv".format(title)
+	if Check == True:
+		Histogramize([(Diff_hist,'NC'),(Diff_hist_hadron_pT,'pTH'+str(pT_cut)),(Diff_hist_jet_pT,'pTJ'+str(pT_cut))], diff_ran, 'L4-L1', 'L4-L1', '#', Save=False,Normalize=False, t_sleep=20)
+		Histogramize([(Ratio_hist,'NC'),(Ratio_hist_hadron_pT,'pTH'+str(pT_cut)),(Ratio_hist_jet_pT,'pTJ'+str(pT_cut))], ratio_ran, 'L4_L1', 'L4/L1', '#', Save=False,Normalize=False, t_sleep=20)
+
+def Make_ROC_Curves(title,Signal_title,Background_title,diff_ran,ratio_ran,ratio_bins,pT_cut):
+	diff_bins = diff_ran[1]-diff_ran[0]
+	Signal_ZeroDiv = np.loadtxt("histogram_files/{}_ZeroDiv.csv".format(Signal_title),delimiter=',')
+	Signal_file = 			rt.TFile("histogram_files/{}_histograms.root".format(Signal_title),"READ")
+	Signal_Diff_eff =  		Get_ROC_Efficiencies(Signal_file.Get("L4-L1"),diff_ran,diff_bins,0)
+	Signal_Diff_eff_hadron_pT = 	Get_ROC_Efficiencies(Signal_file.Get("L4-L1_pTH"),diff_ran,diff_bins,0)
+	Signal_Diff_eff_jet_pT = 	Get_ROC_Efficiencies(Signal_file.Get("L4-L1_pTJ"),diff_ran,diff_bins,0)
+	Signal_Ratio_eff = 		Get_ROC_Efficiencies(Signal_file.Get("L4_L1"),ratio_ran,ratio_bins,Signal_ZeroDiv[0])
+	Signal_Ratio_eff_hadron_pT = 	Get_ROC_Efficiencies(Signal_file.Get("L4_L1_pTH"),ratio_ran,ratio_bins,Signal_ZeroDiv[1])
+	Signal_Ratio_eff_jet_pT = 	Get_ROC_Efficiencies(Signal_file.Get("L4_L1_pTJ"),ratio_ran,ratio_bins,Signal_ZeroDiv[2])
+	Signal_CSV_eff = 		Get_ROC_Efficiencies(Signal_file.Get("CSV"),(0,1),ratio_bins,0)
+        Signal_CSV_eff_hadron_pT =	Get_ROC_Efficiencies(Signal_file.Get("CSV_pTH"),(0,1),ratio_bins,0)
+	Signal_CSV_eff_jet_pT = 	Get_ROC_Efficiencies(Signal_file.Get("CSV_pTJ"),(0,1),ratio_bins,0)
+
+	Background_ZeroDiv = np.loadtxt("histogram_files/{}_ZeroDiv.csv".format(Background_title),delimiter=',')
+	Background_file = 		rt.TFile("histogram_files/{}_histograms.root".format(Background_title),"READ")
+	print "L4-L1"
+	Background_Diff_eff =  		Get_ROC_Efficiencies(Background_file.Get("L4-L1"),diff_ran,diff_bins,0,print_cut=True)
+	print "L4-L1_pTH"
+	Background_Diff_eff_hadron_pT = Get_ROC_Efficiencies(Background_file.Get("L4-L1_pTH"),diff_ran,diff_bins,0,print_cut=True)
+	print "L4-L1_pTJ"
+	Background_Diff_eff_jet_pT = 	Get_ROC_Efficiencies(Background_file.Get("L4-L1_pTJ"),diff_ran,diff_bins,0,print_cut=True)
+	print "L4_L1"
+	Background_Ratio_eff = 		Get_ROC_Efficiencies(Background_file.Get("L4_L1"),ratio_ran,ratio_bins,Background_ZeroDiv[0],print_cut=True)
+	print "L4_L1_pTH"
+	Background_Ratio_eff_hadron_pT=	Get_ROC_Efficiencies(Background_file.Get("L4_L1_pTH"),ratio_ran,ratio_bins,Background_ZeroDiv[1],print_cut=True)
+	print "L4_L1_pTJ"
+	Background_Ratio_eff_jet_pT = 	Get_ROC_Efficiencies(Background_file.Get("L4_L1_pTJ"),ratio_ran,ratio_bins,Background_ZeroDiv[2],print_cut=True)
+	print "CSV"
+	Background_CSV_eff = 		Get_ROC_Efficiencies(Background_file.Get("CSV"),(0,1),ratio_bins,0,print_cut=True)
+        print "CSV_pTH"
+	Background_CSV_eff_hadron_pT =	Get_ROC_Efficiencies(Background_file.Get("CSV_pTH"),(0,1),ratio_bins,0,print_cut=True)
+	print "CSV_pTJ"
+	Background_CSV_eff_jet_pT = 	Get_ROC_Efficiencies(Background_file.Get("CSV_pTJ"),(0,1),ratio_bins,0,print_cut=True)
+	plt.figure("ROC")
+	plt.clf()
+	plt.plot(Signal_Diff_eff,1-Background_Diff_eff,'r-',label='L4-L1')
+	plt.plot(Signal_Diff_eff_hadron_pT,1-Background_Diff_eff,'r-.',label='L4-L1_pTH'+str(pT_cut))
+	plt.plot(Signal_Diff_eff_jet_pT,1-Background_Diff_eff,'r--',label='L4-L1_pTJ'+str(pT_cut))
+	plt.plot(Signal_Ratio_eff,1-Background_Ratio_eff,'b-',label='L4_L1')
+	plt.plot(Signal_Ratio_eff_hadron_pT,1-Background_Ratio_eff,'b-.',label='L4_L1_pTH'+str(pT_cut))
+	plt.plot(Signal_Ratio_eff_jet_pT,1-Background_Ratio_eff,'b--',label='L4_L1_pTJ'+str(pT_cut))
+	plt.plot(Signal_CSV_eff,1-Background_CSV_eff,'g-',label='CSV')
+        plt.plot(Signal_CSV_eff_hadron_pT,1-Background_CSV_eff,'g-.',label='CSV_pTH'+str(pT_cut))
+        plt.plot(Signal_CSV_eff_jet_pT,1-Background_CSV_eff,'g--',label='CSV_pTJ'+str(pT_cut))
+	plt.plot([0,1],[0.9,0.9],'k:',label="10% mistag")
+	plt.xlabel(r"$\epsilon$_signal")
+	plt.ylabel(r"1-$\epsilon$_background")
+	plt.title("ROC-Curves")
+	plt.legend(loc=3)
+	plt.savefig("ROC/{}_ROC_Curves.png".format(title))
+	plt.show()
+
+def Get_ROC_Efficiencies(histogram,ran,nCuts,ZeroDiv,print_cut=False):
+	Cuts = np.linspace(ran[0],ran[1],nCuts+1)
+	bin_ran = (histogram.GetXaxis().FindBin(ran[0]),histogram.GetXaxis().FindBin(ran[1]))
+	Efficiencies = np.zeros(nCuts+1)
+	FullIntegral = histogram.Integral(bin_ran[0],bin_ran[1])
+	for n,cut in enumerate(Cuts):
+		bin_cut = histogram.GetXaxis().FindBin(cut)
+		Efficiencies[n] = histogram.Integral(bin_cut,bin_ran[1])/(FullIntegral+ZeroDiv)
+	diff = 1
+	closest = 0
+	if print_cut:
+		for n,eff in enumerate(Efficiencies):
+			if abs(eff - 0.1) < diff:
+				closest = n
+				diff = abs(eff - 0.1)
+		print "Mistag rate:",Efficiencies[closest], "corresponding to a cut at", Cuts[closest]
+	return Efficiencies
+		
+	
+def ANN_data(signal_data,background_data,dR_d,dR_r):
+	m1 = len(signal_data)
+	m2 = len(background_data)
+	m = m1+m2
+	print "there are {} signal events and {} background events".format(m1,m2)
+	csv_file = open("ANN_data.csv","wb")
+	writer = csv.writer(csv_file)
+	for n,particle in enumerate(signal_data):
+		L1_d,L2_d,L3_d,L4_d,L1_r,L2_r,L3_r,L4_r = 0,0,0,0,0,0,0,0
+                for cluster in particle:
+                        if cluster[0][8] <= dR_d:
+                                if cluster[0][2] == 1: L1_d += 1
+                                if cluster[0][2] == 2: L2_d += 1
+                                if cluster[0][2] == 3: L3_d += 1
+                                if cluster[0][2] == 4: L4_d += 1
+			elif cluster[0][8] <= dR_r:
+                                if cluster[0][2] == 1: L1_r += 1.
+                                if cluster[0][2] == 2: L2_r += 1.
+                                if cluster[0][2] == 3: L3_r += 1.
+                                if cluster[0][2] == 4: L4_r += 1.
+
+		Diff = L4_d - L1_d
+		try:
+			ratio = L4_r/L1_r
+		except ZeroDivisionError:
+			ratio = 10*L4_r
+		jet_pT = particle[0][0][10]
+		CSV = particle[0][0][9]
+		writer.writerow([1,CSV,L1_d,L2_d,L3_d,L4_d,Diff,L1_r,L2_r,L3_r,L4_r,ratio,jet_pT])
+	
+	for n,particle in enumerate(background_data):
+		if n >= 2*m1: break
+		L1_d,L2_d,L3_d,L4_d,L1_r,L2_r,L3_r,L4_r = 0,0,0,0,0,0,0,0
+                for cluster in particle:
+                        if cluster[0][8] <= dR_d:
+                                if cluster[0][2] == 1: L1_d += 1
+                                if cluster[0][2] == 2: L2_d += 1
+                                if cluster[0][2] == 3: L3_d += 1
+                                if cluster[0][2] == 4: L4_d += 1
+			elif cluster[0][8] <= dR_r:
+                                if cluster[0][2] == 1: L1_r += 1.
+                                if cluster[0][2] == 2: L2_r += 1.
+                                if cluster[0][2] == 3: L3_r += 1.
+                                if cluster[0][2] == 4: L4_r += 1.
+
+		Diff = L4_d - L1_d
+		try:
+			ratio = L4_r/L1_r
+		except ZeroDivisionError:
+			ratio = 10*L4_r
+		jet_pT = particle[0][0][10]
+		CSV = particle[0][0][9]
+		writer.writerow([0,CSV,L1_d,L2_d,L3_d,L4_d,Diff,L1_r,L2_r,L3_r,L4_r,ratio,jet_pT])
+	csv_file.close()
 
 def ClusterMatch(title, file_path, dR, MomentumThreshold, JetMode=False, HadronsNotQuarks=False,BG=False, Plot=False, Axes=None, Save=False, dR_dist=False, LightVersion=False, EarlyBreak=0, Continue=False):
         """returns unique ID and coordinates of all pixel clusters that lie inside the dR-cone of a b-particle trajectory; optionally it returns also a 3D-plot
@@ -909,7 +1109,7 @@ def ClusterMatch(title, file_path, dR, MomentumThreshold, JetMode=False, Hadrons
 		print "saving file - do not abort computation now!" 
                 with open("HitClusterDR"+str(dR)+"on"+title+".pkl", 'w') as f:
                         pickle.dump(HitClusters, f)
-		print "Saved as HitClusterDR"+str(dR)+"on"+title+".pkl",
+		print "Saved as HitClusterDR"+str(dR)+"on"+title+".pkl"
 
         if dR_dist == True:
                 c1 = rt.TCanvas('c1','c1',600,600)
@@ -958,27 +1158,43 @@ if __name__ == '__main__':
                 Grid = pickle.load(f)
 	ax = Initialize3DPlot('Particle_Trajectories', 'x', 'y', 'z', grid=Grid)
 	'''
+	'''
+	print "HitClusterDR0.1onDummy_4TeV-SignalJet.pkl" 	
+	with open("HitClusterDR0.1onDummy_4TeV-SignalJet.pkl",) as f:   
+                Signal = pickle.load(f)
+
+	print "HitClusterDR0.16onBackgroundJet.pkl"
+	with open("HitClusterDR0.16onBackgroundJet.pkl",) as f: 
+               Background = pickle.load(f)
+	'''
+
 	
-	#load pre-processed data
-
-	#with open("HitClusterDR0.05onB-hadrons.pkl",) as f:   
-        #	Signal = pickle.load(f)
-
-	#with open("NewHitClusterDR0.04onbackground_particles.pkl",) as f:   
-        #	Backgrounddata = pickle.load(f)
 	'''
 	print "opening file HitClusterDR0.16on2TeV-SignalJet.pkl"
 	with open("HitClusterDR0.16on2TeV-SignalJet.pkl",) as f:   
                 Signal1 = pickle.load(f)
-
+	'''
 	print "opening file HitClusterDR0.16on4TeV-SignalJet.pkl" 	
 	with open("HitClusterDR0.16on4TeV-SignalJet.pkl",) as f:   
                 Signal2 = pickle.load(f)
+	
+	#print "opening file HitClusterDR0.1onBG1Jet.pkl"
+	#with open("HitClusterDR0.1onBG1Jet.pkl",) as f: 
+        #       Background = pickle.load(f)
+	
+	
+	#ANN_data(Signal2,Background,0.04,0.1)
+	Make_ROC_histograms("4TeV-Signal", Signal2, 0.04, 0.01, 1200,Check=False)
+	
+	Background = []
+	for n in range(1,4):
+		print "opening file HitClusterDR0.1onBG{}Jet.pkl".format(n)
+		with open("HitClusterDR0.1onBG{}Jet.pkl".format(n),) as f:
+			Background += pickle.load(f)
+	
+	Make_ROC_histograms("Background", Background, 0.04, 0.01, 1200,Check=False)
+	Make_ROC_Curves("Best_Discriminants_high_pT","4TeV-Signal","Background",(-25,25),(0,10),60,1200)
 
-	print "opening file HitClusterDR0.1onBG1Jet.pkl"
-	with open("HitClusterDR0.1onBG1Jet.pkl",) as f: 
-               Background = pickle.load(f)
-	'''
 	'''
 	tagged_jets_hist([(Signal1,'2TeV-signal',(350,1200)),(Signal2,'4TeV-signal',(350,2400))],"L4-L1", 0.04, 5, 0.65, 60, Difference=True, mode="pT_hadron",Save=True)
 	tagged_jets_hist([(Signal1,'2TeV-signal',(0,1500)),(Signal2,'4TeV-signal',(0,2400))],"L4-L1", 0.04, 5, 0.65, 60, Difference=True, mode="pT_jet",Save=True)
@@ -999,18 +1215,31 @@ if __name__ == '__main__':
 	'''
 	#exclusive_tagged_jets_hist('4TeV-Signal', Signal2, "L4-L1", 0.04, 5, 0.675, (350,2200), 60, Difference=True, mode="pT_hadron",Save=True)
 
+	tagged_jets_hist([(Signal2,"4TeV-Signal",(350,2600)),(Background,'Background',(350,2600))],"L4-L1_pT1200", 0.04, 7, 0.716, 60, Difference=True, mode="pT_hadron",Save=True)
+	tagged_jets_hist([(Signal2,"4TeV-Signal",(0,2600)),(Background,'Background',(0,2600))],"L4-L1_pT1200", 0.04, 7, 0.716, 60, Difference=True, mode="pT_jet",Save=True)
+	tagged_jets_hist([(Signal2,"4TeV-Signal",(350,2600)),(Background,'Background',(350,2600))],"L4_L1_pT1200", 0.1, 2, 0.716, 60, Difference=False, mode="pT_hadron",Save=True)
+	tagged_jets_hist([(Signal2,"4TeV-Signal",(0,2600)),(Background,'Background',(0,2600))],"L4_L1_pT1200", 0.1, 2, 0.716, 60, Difference=False, mode="pT_jet",Save=True)
 	
-	#efficiency vs pT plots
+
+
+
 	'''
+	#efficiency vs pT plots
+	
 	hadron_file_diff = rt.TFile("histogram_files/pT_hists/tagged_jets_vs_pT_hadron_dR_0.04_4TeV-signalL4-L1.root","READ")
 	hadron_AllJetsHist = hadron_file_diff.Get("4TeV-signal_AllJets")
 	hadron_CSVHist = hadron_file_diff.Get("4TeV-signal_CSV")
 	hadron_DiffHist = hadron_file_diff.Get("4TeV-signal_Discriminant")
 	hadron_file_ratio = rt.TFile("histogram_files/pT_hists/tagged_jets_vs_pT_hadron_dR_0.1_4TeV-signalL4_L1.root","READ")
 	hadron_RatioHist = hadron_file_ratio.Get("4TeV-signal_Discriminant")
+
+	hadron_AllJetsHist2 = RebinHist(hadron_AllJetsHist,"AllJets")
+	hadron_CSVHist2 = RebinHist(hadron_CSVHist,"CSV")
+	hadron_DiffHist2 = RebinHist(hadron_DiffHist,"Diff")
+	hadron_RatioHist2 = RebinHist(hadron_RatioHist,"Ratio")
 	
-	
-	Efficiency_vs_pT("4TeV-Signal_Efficiency",[(hadron_DiffHist,"L4-L1"),(hadron_RatioHist,"L4/L1"),(hadron_CSVHist,"CSV")], hadron_AllJetsHist, "pT_hadron",Save=True)
+	Efficiency_vs_pT("4TeV-Signal_Efficiency_rebin",[(hadron_DiffHist2,"L4-L1"),(hadron_RatioHist2,"L4/L1"),(hadron_CSVHist2,"CSV")], hadron_AllJetsHist2, "pT_hadron",Save=True)
+	#Efficiency_vs_pT("4TeV-Signal_Efficiency",[(hadron_DiffHist,"L4-L1"),(hadron_RatioHist,"L4/L1"),(hadron_CSVHist,"CSV")], hadron_AllJetsHist, "pT_hadron",Save=True)
 
 	jet_file_diff = rt.TFile("histogram_files/pT_hists/tagged_jets_vs_pT_jet_dR_0.04_4TeV-signalL4-L1.root","READ")
 	jet_AllJetsHist = jet_file_diff.Get("4TeV-signal_AllJets")
@@ -1019,14 +1248,16 @@ if __name__ == '__main__':
 	jet_file_ratio = rt.TFile("histogram_files/pT_hists/tagged_jets_vs_pT_jet_dR_0.1_4TeV-signalL4_L1.root","READ")
 	jet_RatioHist = jet_file_ratio.Get("4TeV-signal_Discriminant")
 
-	Efficiency_vs_pT("4TeV-Signal_Efficiency",[(jet_DiffHist,"L4-L1"),(jet_RatioHist,"L4/L1"),(jet_CSVHist,"CSV")], jet_AllJetsHist, "pT_jet",Save=True)
-	'''
-	'''
-	def RebinHist(hist,name):
-		import array
-		bins_ = array.array('d',[350.0, 387.5, 425.0, 462.5, 500.0, 537.5, 575.0, 612.5, 650.0, 687.5, 725.0, 762.5, 800.0, 837.5, 875.0, 912.5, 950.0, 987.5, 1025.0, 1100.0, 1200.0, 1400.0, 1600.0, 1800.0, 2100.0, 2500.0, 3000.0])
-		return 	hist.Rebin(len(bins_)-1,"rebinned_"+name,bins_)
+	jet_AllJetsHist2 = RebinHist(jet_AllJetsHist,"AllJets")
+	jet_CSVHist2 = RebinHist(jet_CSVHist,"CSV")
+	jet_DiffHist2 = RebinHist(jet_DiffHist,"Diff")
+	jet_RatioHist2 = RebinHist(jet_RatioHist,"Ratio")
 
+	Efficiency_vs_pT("4TeV-Signal_Efficiency_rebin",[(jet_DiffHist2,"L4-L1"),(jet_RatioHist2,"L4/L1"),(jet_CSVHist2,"CSV")], jet_AllJetsHist2, "pT_jet",Save=True)
+	#Efficiency_vs_pT("4TeV-Signal_Efficiency",[(jet_DiffHist,"L4-L1"),(jet_RatioHist,"L4/L1"),(jet_CSVHist,"CSV")], jet_AllJetsHist, "pT_jet",Save=True)
+	'''
+	'''
+	
 	BG_hadron_file_diff = rt.TFile("histogram_files/pT_hists/tagged_jets_vs_pT_hadron_dR_0.04_BackgroundL4-L1.root","READ")
 	BG_hadron_AllJetsHist = BG_hadron_file_diff.Get("Background_AllJets")
 	BG_hadron_CSVHist = BG_hadron_file_diff.Get("Background_CSV")
@@ -1058,8 +1289,12 @@ if __name__ == '__main__':
 	Efficiency_vs_pT("Mistag_Rate_rebin",[(BG_jet_DiffHist2,"L4-L1"),(BG_jet_RatioHist2,"L4/L1"),(BG_jet_CSVHist2,"CSV")], BG_jet_AllJetsHist2, "pT_jet",Save=True)
 
 	'''
-
-	#Correlation_Hist2D("jet_pT_vs_decayvx_R", Signal1, "pT_jet","decay_vx", (0,2500), (0,25), 50, 50,Save=True)
+	
+	#Correlation_Hist2D("jet_pT_vs_decayvx_R", Signal2, "pT_jet","decay_vx", (0,2500), (0,60), 50, 50,Profiling = False,Save=True)
+	#Correlation_Hist2D("jet_pT_vs_decayvx_R_Profiling", Signal2, "pT_jet","decay_vx", (0,2500), (0,60), 50, 50,Profiling = True,Save=True)
+	
+	#Correlation_Hist2D("jet_pT_vs_hadron_pT", Signal2, "pT_jet","pT_hadron", (0,2500), (0,2500), 50, 50,Profiling = False,Save=True)
+	#Correlation_Hist2D("jet_pT_vs_hadron_pT_Profiling", Signal2, "pT_jet","pT_hadron", (0,2500), (0,2500), 50, 50,Profiling = True,Save=True)
 
 	
 	'''
@@ -1106,9 +1341,6 @@ if __name__ == '__main__':
 		except:
 			continue
 	'''
-	dR = 0.1
-	n=3
-	BG3 = ClusterMatch('BG'+str(n),Additional_Background_String.format(n), dR, MomentumThresholdBackground,JetMode=True, HadronsNotQuarks=True, BG=True, Plot=False, Axes=None, Save=True, dR_dist = False, LayerHist=False,LightVersion=True, EarlyBreak=0,Continue=True)
 	
 	'''
 	#HugeBackground = ClusterMatch('Background', Additional_Background[0], dR, MomentumThresholdBackground, HadronsNotQuarks=True, BG=True, Plot=True, Axes=ax, Save=False, dR_dist = False, LayerHist=False, EarlyBreak=500)
@@ -1222,10 +1454,11 @@ if __name__ == '__main__':
 	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.04,pT_jet=1000, Difference=True, Abs=False, dR_check=True, Save=True)
 	Li_Lj_Hist1D(4, 1, [(Signal1,'2TeV-signal'),(Signal2,'4TeV-signal')], Background, 40, (0,6),dR=0.1,pT_jet=1000, Difference=False, Abs=False, dR_check=True, Save=True)
 
-		
-	hist_files = ['L4-L1_dR_0.04_pTH_1000','L4-L1_dR_0.04_pTJ_1000','L4_L1_dR_0.1_pTH_1000','L4_L1_dR_0.1_pTJ_1000','CSV_pTH_1000','CSV_pTJ_1000']
+	'''
+	'''	
+	hist_files = ['L4-L1_dR_0.04_pTH_1200','L4-L1_dR_0.04_pTJ_1200','L4_L1_dR_0.1_pTH_1200','L4_L1_dR_0.1_pTJ_1200','CSV_pTH_1200','CSV_pTJ_1200']
 	hist_files += ['L4-L1_dR_0.04','L4_L1_dR_0.1','CSV']
-	hist_files = ['L4-L1_dR_0.04','L4_L1_dR_0.1','CSV', 'L4-L1_dR_0.04_pTJ_1000','L4_L1_dR_0.1_pTJ_1000','CSV_pTJ_1000']
+	#hist_files = ['L4-L1_dR_0.04','L4_L1_dR_0.1','CSV', 'L4-L1_dR_0.04_pTJ_1000','L4_L1_dR_0.1_pTJ_1000','CSV_pTJ_1000']
 	Draw_ROC_curves(hist_files, Title='Best_Discriminants',ZeroDiv=True,AddCSV=False,Save=True)
 	'''
 
