@@ -12,8 +12,9 @@ import sys
 import ClusterMatcher as CM
 import TrackMatcher as TM
 import FinalClusterMatcher as FCM
+import Analysis as Ana
 
-	
+FeatureDict = {'nEvent':0, 'CSV':1, 'pT_hadron':2, 'pT_jet':3, 'decayvx_R':4, 'L1_0.04':5, 'L2_0.04':6, 'L3_0.04':7, 'L4_0.04':8, 'L1_0.06':9, 'L2_0.06':10, 'L3_0.06':11, 'L4_0.06':12, 'L1_0.08':13, 'L2_0.08':14, 'L3_0.08':15, 'L4_0.08':16, 'L1_0.1':17, 'L2_0.1':18, 'L3_0.1':19, 'L4_0.1':20, 'L1_0.16':21, 'L2_0.16':22, 'L3_0.16':23, 'L4_0.16':24}	
 
 def  Sample_Analysis(global_title, file_paths, feature):
 
@@ -488,7 +489,7 @@ def efficient_Make_Binned_ROC_histograms(title, data, bins, PU_range='full'):
         csv_file.close()
         print "saved zero division occurences in Thesis_Plots/root_files/{}_ZeroDiv.csv".format(title)
 
-def Make_Binned_ROC_Curves(title,Signal_title,Background_title,bins, diff=False,log=False):
+def Make_Binned_ROC_Curves(title,Signal_title,Background_title,bins, diff=False,log=False, ANN=False):
         #hsv = plt.get_cmap('hsv')
         #color = hsv(np.linspace(0,1.0,len(bins)-1))
         #color = ['b', 'g', 'r', 'c', 'm', 'y']
@@ -509,10 +510,19 @@ def Make_Binned_ROC_Curves(title,Signal_title,Background_title,bins, diff=False,
 		nbins = ratio_bins
 		ran = ratio_ran
 		dis_string = "L4_L1_"
-
-        Signal_ZeroDiv = np.loadtxt("Thesis_Plots/root_files/{}_ZeroDiv.csv".format(Signal_title),delimiter=',')
+	
+	if ANN:
+		nbins = 60
+		ran = (0,1)
+		dis_string = "ANN_"
+	
+	if ANN:
+		Signal_ZeroDiv = np.zeros(len(bins)-1)
+		Background_ZeroDiv = np.zeros(len(bins)-1)
+	else:
+	        Signal_ZeroDiv = np.loadtxt("Thesis_Plots/root_files/{}_ZeroDiv.csv".format(Signal_title),delimiter=',')
+		Background_ZeroDiv = np.loadtxt("Thesis_Plots/root_files/{}_ZeroDiv.csv".format(Background_title),delimiter=',')
         Signal_file = rt.TFile("Thesis_Plots/root_files/{}_histograms.root".format(Signal_title),"READ")
-        Background_ZeroDiv = np.loadtxt("Thesis_Plots/root_files/{}_ZeroDiv.csv".format(Background_title),delimiter=',')
         Background_file =    rt.TFile("Thesis_Plots/root_files/{}_histograms.root".format(Background_title),"READ")
 
         plt.figure("ROC")
@@ -532,20 +542,26 @@ def Make_Binned_ROC_Curves(title,Signal_title,Background_title,bins, diff=False,
                         plt.plot(CSV_Signal_Eff,1-CSV_BG_Eff, color = color[bin_],linestyle = '--',)
 
         if log:
-		if diff:
-			plt.semilogy([0,0],[0,0],'k-',label = 'L4-L1')
+		if ANN:
+			plt.semilogy([0,0],[0,0],'k-',label = 'ANN')
 		else:
-                	plt.semilogy([0,0],[0,0],'k-',label = 'L4/L1')
+			if diff:
+				plt.semilogy([0,0],[0,0],'k-',label = 'L4-L1')
+			else:
+                		plt.semilogy([0,0],[0,0],'k-',label = 'L4/L1')
                 plt.semilogy([0,0],[0,0],'k-.',label = 'CSV')
                 plt.semilogy([0,1],[0.1,0.1],'k:')
                 plt.xlabel(r"$\epsilon$_signal")
                 plt.ylabel(r"$\epsilon$_background")
                 plt.legend(loc=4)
         else:
-		if diff:
-			plt.plot([0,0],[0,0],'k-',label = 'L4-L1')
+		if ANN:
+			plt.plot([0,0],[0,0],'k-',label = 'ANN')
 		else:
-                	plt.plot([0,0],[0,0],'k-',label = 'L4/L1')
+			if diff:
+				plt.plot([0,0],[0,0],'k-',label = 'L4-L1')
+			else:
+                		plt.plot([0,0],[0,0],'k-',label = 'L4/L1')
                 plt.plot([0,0],[0,0],'k-.',label = 'CSV')
                 #plt.plot([0,1],[0.9,0.9],'k:',label="10% mistag")
                 plt.plot([0,1],[0.9,0.9],'k:')
@@ -661,10 +677,10 @@ def binned_efficiency_vs_PU(title, data, Delta_Cuts, Ratio_Cuts, CSV_Cuts, bins,
                 if particle[1] >= CSV_Cuts[bin_number]: CSV_Hist.Fill(particle[25])
                 L_D = particle[8]-particle[5]
                 if L_D >= Delta_Cuts[bin_number]: Delta_Hist.Fill(particle[25])
-                try:
-                        L_R = particle[16]/float(particle[13])
+                if particle[17] != 0:
+                        L_R = particle[20]/float(particle[17])
                         if L_R >= Ratio_Cuts[bin_number]: Ratio_Hist.Fill(particle[25])
-                except ZeroDivisionError:
+                else:
                         continue
 
         AllJets_Hist = AllJets_Hist.Rebin(len(bins_)-1,"AllJets",bins_)
@@ -702,6 +718,523 @@ def binned_efficiency_vs_PU(title, data, Delta_Cuts, Ratio_Cuts, CSV_Cuts, bins,
         legend.Draw()
         canvas.SaveAs('Thesis_Plots/'+title+"_vs_PU_pT{}{}.png".format(pT_Mode,pT_Cut))
 
+def QuarkHadronComparison(file_paths, title, dR, MomentumThreshold, BG=False, EarlyBreak=0):
+      
+	PT_DIFF = rt.TH1D("pt_diff","pt_diff",40,0,1)
+       	ETA_DIFF = rt.TH1D("eta_diff","eta_diff",40,0,1)
+       	PHI_DIFF = rt.TH1D("phi_diff","phi_diff",40,0,1)
+ 
+	for file_path in file_paths:
+		try: 
+			print "working on file", file_path
+        		file = rt.TFile.Open(file_path)
+        		# open tree file
+        		tree = file.Get("demo/tree")
+        		N = tree.GetEntries()
+			print "nr of events:",N
+        		#pt_diff, eta_diff, phi_diff = [],[],[]
+        		
+        		for i in xrange(N):
+        		        if i % 100 == 0: print "Working on event " ,i
+        		        if EarlyBreak > 0 and i>=EarlyBreak: break
+        		        tree.GetEntry(i)
+        		        for j in range(0,tree.nJets):
+        		                jVector = rt.TLorentzVector()
+        		                jVector.SetPtEtaPhiM(tree.jet_pt[j],tree.jet_eta[j],tree.jet_phi[j],tree.jet_mass[j])
+        		                quark_pt_eta_phi = Ana.SearchFor("quark", tree, jVector, dR, MomentumThreshold, BG)
+        		                hadron_pt_eta_phi = Ana.SearchFor("hadron", tree, jVector, dR, MomentumThreshold, BG)
+        		                if (quark_pt_eta_phi != False and hadron_pt_eta_phi != False):
+        		                        pt_diff_temp = abs(quark_pt_eta_phi[0] - hadron_pt_eta_phi[0])/abs(quark_pt_eta_phi[0])
+        		                        eta_diff_temp = abs(quark_pt_eta_phi[1] - hadron_pt_eta_phi[1])/abs(quark_pt_eta_phi[1])
+        		                        phi_diff_temp = abs(quark_pt_eta_phi[2] - hadron_pt_eta_phi[2])/abs(quark_pt_eta_phi[2])
+        		                        PT_DIFF.Fill(pt_diff_temp)
+        		                        ETA_DIFF.Fill(eta_diff_temp)
+        		                        PHI_DIFF.Fill(phi_diff_temp)
+		except:
+			print "skipped file because of error"
+			continue
+
+	tfile = rt.TFile("Thesis_Plots/root_files/QuarkvsHadron_{}.root".format(title),"recreate")
+	PT_DIFF.Write()
+        ETA_DIFF.Write()
+        PHI_DIFF.Write()
+	''' 
+        Histogramize([(PT_DIFF,"pT_diff_"+title)], (0,700), "pt_diff"+title, "pt_diff", "# particles", Save=save,Normalize=False, t_sleep=5)
+        Histogramize([(ETA_DIFF,"eta_diff_"+title)], (0,0.2), "eta_diff"+title, "eta_diff", "# particles", Save=save,Normalize=False, t_sleep=5)
+        Histogramize([(PHI_DIFF,"phi_diff"+title)], (0,0.2), "phi_diff"+title, "phi_diff", "# particles", Save=save,Normalize=False, t_sleep=5)
+        #return (pt_diff,eta_diff,phi_diff)
+	'''
+
+def exclusive_tagged_jets_hist(signal_title, data, discriminant, discriminant_cut, CSV_cut,ran, nbins, Difference=False, mode="pT_jet",y_max=0,Save=False):
+        """creates three histograms when given a signal dataset: -all jets tagged by CSV but not by the discriminant (L4-L1 for Difference = True, L4/L1 for Difference = False inside given dR), -all jets tagged
+by the discriminant but not by CSV, -all jets tagged by both. the amount of jets is plotted versus the feature given as string to 'mode' (see FeatureDict)"""
+        title = signal_title+"_tagged_jets_vs_"+mode+"_exclusive"
+        CSV_and_not_Discriminant = rt.TH1D(signal_title+"_CSV_not_Discriminant",title,nbins,ran[0],ran[1])
+        CSV_and_not_Discriminant.SetLineColor(3)
+        Discriminant_and_not_CSV = rt.TH1D(signal_title+"_Discriminant_and_not_CSV",title,nbins,ran[0],ran[1])
+        Discriminant_and_not_CSV.SetLineColor(2)
+        Discriminant_and_CSV = rt.TH1D(signal_title+"_Discriminant_and_CSV",title,nbins,ran[0],ran[1])
+        Discriminant_and_CSV.SetLineColor(4)
+	if Difference:
+		title = title+"_delta"
+	else:
+		title = title+"_ratio"
+        for particle in data:
+                CSV_tag, Disc_tag = False, False
+                if particle[1] >= CSV_cut:
+                        CSV_tag = True
+                if Difference:
+                        L = particle[8]-particle[5]
+                else:
+                        if particle[17] != 0:
+                                L = particle[20]/float(particle[17])
+                        else:
+                                continue
+                if L >= discriminant_cut:
+                                Disc_tag = True
+                if Disc_tag and not CSV_tag: Discriminant_and_not_CSV.Fill(particle[FeatureDict[mode]])
+                if CSV_tag and not Disc_tag: CSV_and_not_Discriminant.Fill(particle[FeatureDict[mode]])
+                if CSV_tag and Disc_tag: Discriminant_and_CSV.Fill(particle[FeatureDict[mode]])
+        canvas = rt.TCanvas("canvas","canvas",600,600)
+        canvas.SetTitle(title)
+        rt.gStyle.SetOptStat(0)
+        legend = rt.TLegend(0.9,0.9,0.65,0.75)
+        legend.AddEntry(Discriminant_and_not_CSV,discriminant+"_and_not_CSV")
+        legend.AddEntry(CSV_and_not_Discriminant,"CSV_and_not_"+discriminant)
+        legend.AddEntry(Discriminant_and_CSV, discriminant+"_and_CSV")
+        Discriminant_and_not_CSV.GetXaxis().SetTitle(mode)
+        Discriminant_and_not_CSV.GetYaxis().SetTitle('# jets')
+        Discriminant_and_not_CSV.GetYaxis().SetTitleOffset(1.5)
+	if y_max >0: CSV_and_not_Discriminant.SetMaximum(y_max)
+        CSV_and_not_Discriminant.Draw()
+        Discriminant_and_not_CSV.Draw("SAME")
+	Discriminant_and_CSV.Draw("SAME")
+        legend.Draw()
+        if Save:
+                canvas.SaveAs("Thesis_Plots/"+title+".png")
+                Tfile= rt.TFile("Thesis_Plots/root_files/"+title+".root","recreate")
+                Discriminant_and_not_CSV.Write()
+                CSV_and_not_Discriminant.Write()
+                Discriminant_and_CSV.Write()
+
+def binned_exclusive_tagged_jets_hist(signal_title, data, discriminant, discriminant_cuts, CSV_cuts, bins, ran, nbins, Difference=False, mode="pT_jet", y_max=0,Save=False):
+        """creates three histograms when given a signal dataset: -all jets tagged by CSV but not by the discriminant (L4-L1 for Difference = True, L4/L1 for Difference = False inside given dR), -all jets tagged
+by the discriminant but not by CSV, -all jets tagged by both. the amount of jets is plotted versus the feature given as string to 'mode' (see FeatureDict)"""
+        title = signal_title+"_tagged_jets_vs_"+mode+"_exclusive"
+        CSV_and_not_Discriminant = rt.TH1D(signal_title+"_CSV_not_Discriminant",title,nbins,ran[0],ran[1])
+        CSV_and_not_Discriminant.SetLineColor(3)
+        Discriminant_and_not_CSV = rt.TH1D(signal_title+"_Discriminant_and_not_CSV",title,nbins,ran[0],ran[1])
+        Discriminant_and_not_CSV.SetLineColor(2)
+        Discriminant_and_CSV = rt.TH1D(signal_title+"_Discriminant_and_CSV",title,nbins,ran[0],ran[1])
+        Discriminant_and_CSV.SetLineColor(4)
+	if Difference:
+		title = title+"_delta"
+	else:
+		title = title+"_ratio"
+        for particle in data:
+		bin_number = FCM.bin_selection(particle,bins)
+                if bin_number == -100: continue
+
+                CSV_tag, Disc_tag = False, False
+                if particle[1] >= CSV_cuts[bin_number]:
+                        CSV_tag = True
+                if Difference:
+                        L = particle[8]-particle[5]
+                else:
+                        if particle[17] != 0:
+                                L = particle[20]/float(particle[17])
+                        else:
+                                continue
+                if L >= discriminant_cuts[bin_number]:
+                                Disc_tag = True
+                if Disc_tag and not CSV_tag: Discriminant_and_not_CSV.Fill(particle[FeatureDict[mode]])
+                if CSV_tag and not Disc_tag: CSV_and_not_Discriminant.Fill(particle[FeatureDict[mode]])
+                if CSV_tag and Disc_tag: Discriminant_and_CSV.Fill(particle[FeatureDict[mode]])
+        canvas = rt.TCanvas("canvas","canvas",600,600)
+        canvas.SetTitle(title)
+        rt.gStyle.SetOptStat(0)
+        legend = rt.TLegend(0.9,0.9,0.65,0.75)
+        legend.AddEntry(Discriminant_and_not_CSV,discriminant+"_and_not_CSV")
+        legend.AddEntry(CSV_and_not_Discriminant,"CSV_and_not_"+discriminant)
+        legend.AddEntry(Discriminant_and_CSV, discriminant+"_and_CSV")
+        Discriminant_and_not_CSV.GetXaxis().SetTitle(mode)
+        Discriminant_and_not_CSV.GetYaxis().SetTitle('# jets')
+        Discriminant_and_not_CSV.GetYaxis().SetTitleOffset(1.5)
+	if y_max >0: CSV_and_not_Discriminant.SetMaximum(y_max)
+        CSV_and_not_Discriminant.Draw()
+        Discriminant_and_not_CSV.Draw("SAME")
+	Discriminant_and_CSV.Draw("SAME")
+        legend.Draw()
+        if Save:
+                canvas.SaveAs("Thesis_Plots/"+title+".png")
+                Tfile= rt.TFile("Thesis_Plots/root_files/"+title+".root","recreate")
+                Discriminant_and_not_CSV.Write()
+                CSV_and_not_Discriminant.Write()
+                Discriminant_and_CSV.Write()
+
+def ANN_predict(particle, model, model_type):
+	"""takes the data of one particle (premade by Finalclustermatcher(), a keras model and a string describing its type and returns the b-tag value of that particle estimated by the given model"""
+	hit_data = np.delete(particle[0:25],[0,1,2,3,4])
+	conv_data = np.reshape(hit_data,(-1,5,4,1))
+
+	if particle[17] != 0:
+		L4_L1 = particle[20]/particle[17]
+		L2_L1 = particle[18]/particle[17]
+	else:
+		L4_L1 = 10
+		L2_L1 = 10
+	if particle[18] != 0:
+		L3_L2 = particle[19]/particle[18]
+	else:
+		L3_L2 = 10
+	if particle[19] != 0:
+		L4_L3 = particle[20]/particle[19]
+	else:	
+		L4_L3 = 10
+		
+	disc_data = np.array([[particle[8]-particle[5],L4_L1,L2_L1,L3_L2,L4_L3]])
+
+	if model_type == "simple":
+		input_data = hit_data
+	elif model_type == "convolution":
+		input_data = conv_data
+	elif model_type == "functional":
+		input_data = [conv_data,disc_data]
+	elif model_type == "functional_pT":
+		input_Data = [conv_data,disc_data,particle[3]]
+	elif model_type == "functional_pV":
+		input_Data = [conv_data,disc_data,particle[25]]
+
+	return model.predict(input_data)[0]
+
+def ANN_discriminants(x_data):
+	"""helper function that takes the 5-cones hits data and returns an array containing different discriminants for the functional ANN"""
+        L1_d = x_data[:,0]
+        L4_d = x_data[:,3]
+        L1_r = x_data[:,12]
+        L2_r = x_data[:,13]
+        L3_r = x_data[:,14]
+        L4_r = x_data[:,15]
+        L2_L1 = L2_r/L1_r
+        L3_L2 = L3_r/L2_r
+        L4_L3 = L4_r/L3_r
+        L4_L1 = L4_r/L1_r
+        L2_L1[np.isnan(L2_L1)]=1
+        L3_L2[np.isnan(L3_L2)]=1
+        L4_L3[np.isnan(L4_L3)]=1
+        L4_L1[np.isnan(L4_L1)]=1
+        L2_L1[L2_L1>100]=10
+        L3_L2[L3_L2>100]=10
+        L4_L3[L4_L3>100]=10
+        L4_L1[L4_L1>100]=10
+        return np.vstack((L4_d-L1_d,L4_L1,L2_L1,L3_L2,L4_L3)).transpose()
+
+def ANN_functional_shape(x_data):
+	"""takes the 5-cones hits data and puts it into the right input shape for the functional ANN model"""
+	x_data_Li_Lj= ANN_discriminants(x_data)
+	x_data_Li = np.reshape(x_data[:,:20].flatten(),(-1,5,4,1))
+	return [x_data_Li, x_data_Li_Lj]
+
+def ANN_clusterdata_to_x_pT_PV_CSV_label(signal_data,bg_data,shuffle=False):
+	"""takes the data preprocessed by Finalclustermatcher() and returns a tuple of separated data necessary for any ANN model"""
+	Signal_data = signal_data.copy()
+	Signal_data[:,0]=1
+	BG_data = bg_data.copy()
+	BG_data[:,0] = 0	
+	Data_sample = np.delete(np.vstack((Signal_data,BG_data)),[2,4],axis=1)
+	if shuffle: np.random.shuffle(Data_sample)
+	x_data = Data_sample[:,3:]
+	y_data = Data_sample[:,0]
+	CSV = Data_sample[:,1]
+	pT = Data_sample[:,2]
+	PV = Data_sample[:,-1]
+	return (x_data, pT, PV, CSV, y_data)
+
+def ANN_x_pT_CSV_label_to_clusterdata(x_data, pT, CSV, y_data):
+	"""inverse of the above function: takes data necessary to the ANN and reverts it to the same shape as the data made by the Finalclustermatcher(). nEvent, hadron-pT and decayvx get lost"""
+	blank = np.zeros(shape=(x_data.shape[0],1))
+	Data_sample = np.hstack((y_data.reshape(-1,1),CSV.reshape(-1,1),blank,pT.reshape(-1,1),blank,x_data))
+	signal = Data_sample[Data_sample[:,0]==1]
+	bg = Data_sample[Data_sample[:,0]==0]
+	return (signal, bg)
+
+def ANN_bin_selection(pT,bins):
+	"""numpy array version of the bin_selection() function: takes an array of all pT values and the pT-bins and returns an array of same length as pT with the corresponing bins index at each entry. pT values outside the bins are labeled with -100"""
+	bin_numbers = np.zeros(len(pT))
+	for n in range(len(bins)-1):
+		bin_numbers += (n+100)*(pT>bins[n])*(pT<bins[n+1])
+	bin_numbers -=100
+	return bin_numbers.astype(int)
+
+def ANN_Make_Binned_ROC_histograms(title,model, x_data, pT, CSV, bins, PU_range='full'):
+	"""makes binned ROC histograms for an ANN. takes as input a keras model, the necessary ANN data, pT, CSV and the desired pT-binning"""
+        nbins = 60
+
+        ANN_hist_list = []
+        CSV_hist_list = []
+        for bin_ in range(len(bins)-1):
+                ANN_hist_list.append(rt.TH1D("ANN_"+str(bins[bin_])+"_"+str(bins[bin_+1]),"ANN_"+str(bins[bin_])+"_"+str(bins[bin_+1]),nbins,0,1))
+                CSV_hist_list.append(rt.TH1D("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1]),"CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1]),nbins,0,1))
+
+	pred_y = model.predict(ANN_functional_shape(x_data))
+	bin_numbers = ANN_bin_selection(pT,bins)
+
+        for n,particle in enumerate(x_data):
+                if PU_range != 'full':
+                        if particle[-1]<PU_range[0] or particle[-1]>PU_range[1]: continue
+                if bin_numbers[n] == -100: continue
+                ANN_hist_list[int(bin_numbers[n])].Fill(pred_y[n])
+                CSV_hist_list[int(bin_numbers[n])].Fill(CSV[n])
+
+        tfile = rt.TFile("Thesis_Plots/root_files/{}_histograms.root".format(title),"recreate")
+        for hist in ANN_hist_list:
+                hist.Write()
+        for hist in CSV_hist_list:
+                hist.Write()
+        print "saved histograms in Thesis_Plots/root_files/{}_histograms.root".format(title)
+
+def ANN_binned_tagged_jets_hist(datalist, model, discriminant_cuts, CSV_cuts, bins, nbins, mode="pT_jet",Save=False):
+        """creates a histogram for each dataset given as list of tuples (x_data, pT, CSV, title, range) of all the jets that were b-tagged by passing a given a list of cut values corresponding to the given pT-bins for CSV and ANN versus a feature (currently only working for jet-pT) given as string to 'mode'. The histograms are saved to a root file for further use."""
+        title = "binned_tagged_jets_vs_"+mode
+	discriminant = "ANN"
+        AllJetsHistlist = []
+        CSVHistlist = []
+        DiscriminantHistlist = []
+        if mode == "pT_hadron":
+                feature = 2
+        elif mode == "pT_jet":
+                feature = 3
+        elif mode == "decay_vx":
+                feature = 4
+        for n,data in enumerate(datalist):
+		datatitle = data[3]
+                print "working on",datatitle
+                ran = data[4]
+		CSV = data[2]
+		pT = data[1]
+		x_data = data[0]
+                AllJetsHistlist.append(rt.TH1D(datatitle+"_AllJets",datatitle+"_"+title,nbins,ran[0],ran[1]))
+                AllJetsHistlist[n].SetLineColor(4)
+                CSVHistlist.append(rt.TH1D(datatitle+"_CSV",datatitle+"_"+title,nbins,ran[0],ran[1]))
+                CSVHistlist[n].SetLineColor(3)
+                DiscriminantHistlist.append(rt.TH1D(datatitle+"_Discriminant",datatitle+"_"+title,nbins,ran[0],ran[1]))
+                DiscriminantHistlist[n].SetLineColor(2)
+
+		pred_y = model.predict(ANN_functional_shape(x_data))
+		bin_numbers = ANN_bin_selection(pT,bins)
+
+	        for i,pT_value in enumerate(pT):
+	                if bin_numbers[i] == -100: continue
+			AllJetsHistlist[n].Fill(pT_value)
+	                if pred_y[i] >= discriminant_cuts[bin_numbers[i]]: DiscriminantHistlist[n].Fill(pT_value)
+	                if CSV[i] >= CSV_cuts[bin_numbers[i]]: CSVHistlist[n].Fill(pT_value)
+
+        canvaslist = []
+        legendlist = []
+        Tfilelist = []
+        for n,data in enumerate(datalist):
+		datatitle = data[3]
+                canvaslist.append(rt.TCanvas(datatitle+"_canvas","canvas",600,600))
+                canvaslist[n].SetTitle(datatitle+"_"+title)
+                rt.gStyle.SetOptStat(0)
+                legendlist.append(rt.TLegend(0.9,0.9,0.65,0.75))
+                legendlist[n].AddEntry(AllJetsHistlist[n], "All jets")
+                legendlist[n].AddEntry(CSVHistlist[n], "CSV")
+                legendlist[n].AddEntry(DiscriminantHistlist[n], discriminant)
+                AllJetsHistlist[n].GetXaxis().SetTitle(mode)
+                AllJetsHistlist[n].GetYaxis().SetTitle('# jets')
+                AllJetsHistlist[n].GetYaxis().SetTitleOffset(1.5)
+                #AllJetsHistlist[n].Draw()
+                #CSVHistlist[n].Draw("SAME")
+                #DiscriminantHistlist[n].Draw("SAME")
+                #legendlist[n].Draw()
+                if Save:
+                        #canvaslist[n].SaveAs(title+"_"+datatitle+discriminant+".png")
+                        Tfilelist.append(rt.TFile("Thesis_Plots/root_files/"+title+"_"+datatitle+discriminant+".root","recreate"))
+                        print "saved histogram as Thesis_Plots/root_files/"+title+"_"+datatitle+discriminant+".root"
+                        AllJetsHistlist[n].Write()
+                        CSVHistlist[n].Write()
+                        DiscriminantHistlist[n].Write()
+
+def ANN_exclusive_tagged_jets_hist(signal_title, x_data, pT, CSV, discriminant_cuts, CSV_cuts, bins, ran, nbins, mode="pT_jet",y_max=0,Save=False):
+        """creates three histograms when given a signal dataset: -all jets tagged by CSV but not by ANN, -all jets tagged
+by ANN but not by CSV, -all jets tagged by both. the amount of jets is plotted versus the feature given as string to 'mode' (currently only jet-pT working) (see FeatureDict)"""
+        title = signal_title+"_tagged_jets_vs_"+mode+"_exclusive"
+	discriminant = "ANN"
+        CSV_and_not_Discriminant = rt.TH1D(signal_title+"_CSV_not_Discriminant",title,nbins,ran[0],ran[1])
+        CSV_and_not_Discriminant.SetLineColor(3)
+        Discriminant_and_not_CSV = rt.TH1D(signal_title+"_Discriminant_and_not_CSV",title,nbins,ran[0],ran[1])
+        Discriminant_and_not_CSV.SetLineColor(2)
+        Discriminant_and_CSV = rt.TH1D(signal_title+"_Discriminant_and_CSV",title,nbins,ran[0],ran[1])
+        Discriminant_and_CSV.SetLineColor(4)
+       
+	pred_y = model.predict(ANN_functional_shape(x_data))
+	bin_numbers = ANN_bin_selection(pT,bins)
+
+	for i,pT_value in enumerate(pT):
+	        if bin_numbers[i] == -100: continue
+                CSV_tag, Disc_tag = False, False
+                if CSV[i] >= CSV_cuts[bin_numbers[i]]:
+                        CSV_tag = True
+                
+		if pred_y[i] >= discriminant_cuts[bin_numbers[i]]:
+                                Disc_tag = True
+                if Disc_tag and not CSV_tag: Discriminant_and_not_CSV.Fill(pT_value)
+                if CSV_tag and not Disc_tag: CSV_and_not_Discriminant.Fill(pT_value)
+                if CSV_tag and Disc_tag: Discriminant_and_CSV.Fill(pT_value)
+        canvas = rt.TCanvas("canvas","canvas",600,600)
+        canvas.SetTitle(title)
+        rt.gStyle.SetOptStat(0)
+        legend = rt.TLegend(0.9,0.9,0.65,0.75)
+        legend.AddEntry(Discriminant_and_not_CSV,discriminant+"_and_not_CSV")
+        legend.AddEntry(CSV_and_not_Discriminant,"CSV_and_not_"+discriminant)
+        legend.AddEntry(Discriminant_and_CSV, discriminant+"_and_CSV")
+        Discriminant_and_not_CSV.GetXaxis().SetTitle(mode)
+        Discriminant_and_not_CSV.GetYaxis().SetTitle('# jets')
+        Discriminant_and_not_CSV.GetYaxis().SetTitleOffset(1.5)
+	if y_max >0: CSV_and_not_Discriminant.SetMaximum(y_max)
+        CSV_and_not_Discriminant.Draw()
+        Discriminant_and_not_CSV.Draw("SAME")
+	Discriminant_and_CSV.Draw("SAME")
+        legend.Draw()
+        if Save:
+                canvas.SaveAs("Thesis_Plots/"+title+".png")
+                Tfile= rt.TFile("Thesis_Plots/root_files/"+title+".root","recreate")
+                Discriminant_and_not_CSV.Write()
+                CSV_and_not_Discriminant.Write()
+                Discriminant_and_CSV.Write()
+
+def Make_Binned_ANN_ROC_Curves(title,Signal_title,Background_title,bins,log=False):
+	"""accesses the files made by ANN_Make_Binned_ROC_histograms() directly to produce a ROC curve for ANN and CSV in the desired pT-bins. A log representation can be turned on"""
+        #hsv = plt.get_cmap('hsv')
+        #color = hsv(np.linspace(0,1.0,len(bins)-1))
+        #color = ['b', 'g', 'r', 'c', 'm', 'y']
+        if len(bins)<=6:
+                color = ['red','green','blue','orange','brown']
+        else:
+                color = ['deepskyblue','rosybrown','olivedrab','royalblue','firebrick','chartreuse','navy','red','darkorchid','lightseagreen','mediumvioletred','blue']
+        nbins = 60
+	dis_string = "ANN_"
+
+        Signal_file = rt.TFile("Thesis_Plots/root_files/{}_ANN_histograms.root".format(Signal_title),"READ")
+        Background_file =   rt.TFile("Thesis_Plots/root_files/{}_ANN_histograms.root".format(Background_title),"READ")
+
+        plt.figure("ROC")
+        plt.clf()
+
+        for bin_ in range(len(bins)-1):
+                Dis_Signal_Eff = FCM.Get_ROC_Efficiencies(Signal_file.Get(dis_string+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),nbins,0)
+                Dis_BG_Eff = FCM.Get_ROC_Efficiencies(Background_file.Get(dis_string+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),nbins,0)
+                CSV_Signal_Eff = FCM.Get_ROC_Efficiencies(Signal_file.Get("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),ratio_bins,0)
+                CSV_BG_Eff = FCM.Get_ROC_Efficiencies(Background_file.Get("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),ratio_bins,0)
+                if log:
+                        plt.semilogy(Dis_Signal_Eff,Dis_BG_Eff, color = color[bin_], linestyle = '-',label=str(bins[bin_])+"_"+str(bins[bin_+1]))
+                        plt.semilogy(CSV_Signal_Eff,CSV_BG_Eff, color = color[bin_],linestyle = '--',)
+
+                else:
+                        plt.plot(Dis_Signal_Eff,1-Dis_BG_Eff, color = color[bin_], linestyle = '-',label=str(bins[bin_])+"_"+str(bins[bin_+1]))
+                        plt.plot(CSV_Signal_Eff,1-CSV_BG_Eff, color = color[bin_],linestyle = '--',)
+
+        if log:
+		if diff:
+			plt.semilogy([0,0],[0,0],'k-',label = 'L4-L1')
+		else:
+                	plt.semilogy([0,0],[0,0],'k-',label = 'L4/L1')
+                plt.semilogy([0,0],[0,0],'k-.',label = 'CSV')
+                plt.semilogy([0,1],[0.1,0.1],'k:')
+                plt.xlabel(r"$\epsilon$_signal")
+                plt.ylabel(r"$\epsilon$_background")
+                plt.legend(loc=4)
+        else:
+		if diff:
+			plt.plot([0,0],[0,0],'k-',label = 'L4-L1')
+		else:
+                	plt.plot([0,0],[0,0],'k-',label = 'L4/L1')
+                plt.plot([0,0],[0,0],'k-.',label = 'CSV')
+                #plt.plot([0,1],[0.9,0.9],'k:',label="10% mistag")
+                plt.plot([0,1],[0.9,0.9],'k:')
+                plt.xlabel(r"$\epsilon$_signal")
+                plt.ylabel(r"1-$\epsilon$_background")
+                plt.legend(loc=3)
+        #plt.title(title+"_ROC-Curves")
+
+        plt.savefig("Thesis_Plots/{}_ROC_Curves.png".format(title))
+        print "saved as Thesis_Plots/{}_ROC_Curves.png".format(title)
+
+def ANN_efficiency_vs_PU(title, x_data, pT, CSV, model, ANN_Cuts, Ratio_Cuts, CSV_Cuts, bins, y_max, pT_Cut=200, BG=False):
+        assert x_data.shape[1]==21, "x_data does not contain PV. Make sure it is made from a PU sample and has shape (x, 21)."
+	assert x_data.shape[0] == len(pT) == len(CSV), "data inputs need to have the same length"
+	assert len(ANN_Cuts) == len(Ratio_Cuts) == len(CSV_Cuts) == len(bins)-1, "cuts need to have the same length and be compatible with amount of bins"
+
+        ran = (0,80)
+        nbins = 80
+        import array
+	if BG:
+		bins_ = array.array('d',[0.0, 11.0]+range(13,41,2)+[42.0, 46.0, 52.0, 80])
+	else:
+        	bins_ = array.array('d',[0.0, 11.0]+range(13,41,2)+[42.0, 46.0, 52.0, 58.0, 65.0, 80])
+
+        #make histograms of efficiency vs PU
+        AllJets_Hist = rt.TH1D("AllJets","AllJets",nbins,ran[0],ran[1])
+        ANN_Hist = rt.TH1D("ANN","ANN",nbins,ran[0],ran[1])
+        Ratio_Hist = rt.TH1D("Ratio","Ratio",nbins,ran[0],ran[1])
+        CSV_Hist = rt.TH1D("CSV","CSV",nbins,ran[0],ran[1])
+
+	AllJets_Hist = AllJets_Hist.Rebin(len(bins_)-1,"AllJets",bins_)
+        ANN_Hist = ANN_Hist.Rebin(len(bins_)-1,"ANN",bins_)
+        Ratio_Hist = Ratio_Hist.Rebin(len(bins_)-1,"Ratio",bins_)
+        CSV_Hist = CSV_Hist.Rebin(len(bins_)-1,"CSV",bins_)
+ 
+	pred_y = model.predict(ANN_functional_shape(x_data))
+	bin_numbers = ANN_bin_selection(pT,bins)
+	
+	for i,pT_value in enumerate(pT):
+			if pT_value < pT_Cut: continue
+	                if bin_numbers[i] == -100: continue
+			AllJets_Hist.Fill(x_data[i,-1])
+			if CSV[i] >= CSV_Cuts[bin_numbers[i]]: CSV_Hist.Fill(x_data[i,-1])
+	                if pred_y[i] >= ANN_Cuts[bin_numbers[i]]: ANN_Hist.Fill(x_data[i,-1])
+			if x_data[i,12] != 0:
+				L_R = x_data[i,15]/float(x_data[i,12])
+				if L_R >= Ratio_Cuts[bin_numbers[i]]: Ratio_Hist.Fill(x_data[i,-1])
+	                
+	'''		
+        AllJets_Hist = AllJets_Hist.Rebin(len(bins_)-1,"AllJets",bins_)
+        ANN_Hist = ANN_Hist.Rebin(len(bins_)-1,"ANN",bins_)
+        Ratio_Hist = Ratio_Hist.Rebin(len(bins_)-1,"Ratio",bins_)
+        CSV_Hist = CSV_Hist.Rebin(len(bins_)-1,"CSV",bins_)
+	'''
+        #Make Graphs and draw them
+        canvas = rt.TCanvas('canvas','canvas',600,600)
+        legend = rt.TLegend(0.1,0.9,0.35,0.75)
+        ANN_Graph = rt.TGraphAsymmErrors()
+        Ratio_Graph = rt.TGraphAsymmErrors()
+        CSV_Graph = rt.TGraphAsymmErrors()
+        Ratio_Graph.SetTitle(title+"_vs_PU_pT{}{}".format('jet',pT_Cut))
+        ANN_Graph.Divide(ANN_Hist,AllJets_Hist,"cl=0.683 b(1,1) mode")
+        Ratio_Graph.Divide(Ratio_Hist,AllJets_Hist,"cl=0.683 b(1,1) mode")
+        CSV_Graph.Divide(CSV_Hist,AllJets_Hist,"cl=0.683 b(1,1) mode")
+        ANN_Graph.SetLineColor(3)
+        Ratio_Graph.SetLineColor(2)
+        CSV_Graph.SetLineColor(4)
+        legend.AddEntry(ANN_Graph, "ANN", "LEP")
+        legend.AddEntry(Ratio_Graph, "L4/L1", "LEP")
+        legend.AddEntry(CSV_Graph, "CSV", "LEP")
+        Ratio_Graph.GetXaxis().SetTitle("#PV")
+        if BG:
+		Ratio_Graph.GetYaxis().SetTitle('mistag rate')
+	else:	
+		Ratio_Graph.GetYaxis().SetTitle('efficiency')
+        Ratio_Graph.GetYaxis().SetTitleOffset(1.5)
+	Ratio_Graph.SetMinimum(0.)
+        Ratio_Graph.SetMaximum(y_max)
+        Ratio_Graph.Draw()
+        ANN_Graph.Draw("SAME")
+        CSV_Graph.Draw("SAME")
+        legend.Draw()
+        canvas.SaveAs('Thesis_Plots/'+title+"_vs_PU_pT{}{}.png".format('jet',pT_Cut))
+
+
 def DrawHistograms(Histograms, ran, title, xlabel, ylabel, Save=False,Normalize=True, t_sleep=0):
         """Draws multiple histograms neatly on a canvas when given to the function as list of tuples (root histogram, title)."""
         canvas = rt.TCanvas('canvas','canvas',600,600)
@@ -737,7 +1270,6 @@ def DrawHistograms(Histograms, ran, title, xlabel, ylabel, Save=False,Normalize=
 		legend.Draw()
         if Save: canvas.SaveAs("Thesis_Plots/"+title+".png")
         sleep(t_sleep)
-
 
 if __name__ == '__main__':
 
@@ -779,12 +1311,12 @@ if __name__ == '__main__':
         Signal_both_noPU = np.vstack((Signal_4TeV_noPU,Signal_2TeV_noPU))
         Background_noPU = FCM.load_data('BG','matched_clusters/BG_noPU/',31, old_version=True)#31
         '''
-		
+	'''		
 	Signal_4TeV_PU = FCM.load_data('4TeV-Signal_PU','matched_clusters/Signal_PU/',15)
         Signal_2TeV_PU = FCM.load_data('2TeV-Signal_PU','matched_clusters/Signal_PU/',19)
         Signal_both_PU = np.vstack((Signal_4TeV_PU,Signal_2TeV_PU))
-        Background_PU = FCM.load_data('BG_PU','matched_clusters/BG_PU/',499)	
-	
+        #Background_PU = FCM.load_data('BG_PU','matched_clusters/BG_PU/',499)	
+	'''
 	#Analysis of samples: mass?, pT, eta?, decayvx, CSV on quarks hadrons jets
 
 	'''
@@ -1036,7 +1568,11 @@ if __name__ == '__main__':
 	Efficiency_vs_pT("4TeV-signal",[(ratio_thist2,"L4/L1"),(diff_thist2,"L4-L1"),(CSV_thist2,"CSV")], AllJets_thist2, 0.6, Save=True,legend_shift=True)
 	Efficiency_vs_pT("Background",[(bg_ratio_thist,"L4/L1"),(bg_diff_thist,"L4-L1"),(bg_CSV_thist,"CSV")], bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True)
 	'''
-	
+	'''
+	exclusive_tagged_jets_hist("4TeV", Signal_4TeV_noPU , "L4/L1", 1.833, 0.667,(200,2500), 60, Difference=False, mode="pT_jet",Save=True)
+	exclusive_tagged_jets_hist("4TeV", Signal_4TeV_noPU , "L4-L1", 5, 0.667,(200,2500), 60, Difference=True, mode="pT_jet",Save=True)
+	'''
+
 	#study on pT-bins
 
 	cut_bins = [0, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250, 2500] #used for the pT-depending cuts
@@ -1055,6 +1591,10 @@ if __name__ == '__main__':
         #efficient_binned_tagged_jets_hist([(Signal_both_noPU, "Signal",(0,2500))],"L4_L1", ratio_cuts_noPU, CSV_cuts_noPU, cut_bins, 60, Difference=False, mode="pT_jet",Save=True)
 	#efficient_binned_tagged_jets_hist([(Background_noPU, "BG",(0,2500))],"L4-L1", delta_cuts_noPU, CSV_cuts_noPU, cut_bins, 60, Difference=True, mode="pT_jet",Save=True)
         #efficient_binned_tagged_jets_hist([(Background_noPU, "BG",(0,2500))],"L4_L1", ratio_cuts_noPU, CSV_cuts_noPU, cut_bins, 60, Difference=False, mode="pT_jet",Save=True)
+	'''
+	binned_exclusive_tagged_jets_hist("Signal_binned",Signal_both_noPU, "L4/L1", ratio_cuts_noPU, CSV_cuts_noPU, cut_bins, (200,2500), 60, Difference=False, mode="pT_jet",Save=True)
+	binned_exclusive_tagged_jets_hist("Signal_binned",Signal_both_noPU, "L4-L1", delta_cuts_noPU, CSV_cuts_noPU, cut_bins, (200,2500), 60, Difference=True, mode="pT_jet",Save=True)
+	'''
 	'''
 	binned_tagged_diff_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_SignalL4-L1.root")
         binned_tagged_ratio_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_SignalL4_L1.root")
@@ -1134,24 +1674,173 @@ if __name__ == '__main__':
 	Efficiency_vs_pT("Signal_binned_PU",[(PU_binned_ratio_thist,"L4/L1"),(PU_binned_diff_thist,"L4-L1"),(PU_binned_CSV_thist,"CSV")], PU_binned_AllJets_thist, 0.65, Save=True,legend_shift=True)
         Efficiency_vs_pT("Background_binned_PU",[(PU_binned_bg_ratio_thist,"L4/L1"),(PU_binned_bg_diff_thist,"L4-L1"),(PU_binned_bg_CSV_thist,"CSV")], PU_binned_bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True)
 	'''
-
+        '''
+	binned_exclusive_tagged_jets_hist("Signal_binned_PU",Signal_both_PU, "L4/L1", ratio_cuts_noPU, CSV_cuts_noPU, cut_bins, (200,2500), 60, Difference=False, mode="pT_jet",Save=True)
+        binned_exclusive_tagged_jets_hist("Signal_binned_PU",Signal_both_PU, "L4-L1", delta_cuts_noPU, CSV_cuts_noPU, cut_bins, (200,2500), 60, Difference=True, mode="pT_jet",Save=True)
+        '''
+	'''
 	binned_efficiency_vs_PU('Efficiency', Signal_both_PU, delta_cuts_PU, ratio_cuts_PU, CSV_cuts_PU, cut_bins, 0.8, pT_Cut=200, pT_Mode="jet")
         binned_efficiency_vs_PU('Efficiency', Signal_both_PU, delta_cuts_PU, ratio_cuts_PU, CSV_cuts_PU, cut_bins, 0.8, pT_Cut=1200, pT_Mode="jet")
 
         binned_efficiency_vs_PU('Mistag-Rate', Background_PU, delta_cuts_PU, ratio_cuts_PU, CSV_cuts_PU, cut_bins, 0.3, pT_Cut=200, pT_Mode="jet",BG=True)
         binned_efficiency_vs_PU('Mistag-Rate', Background_PU, delta_cuts_PU, ratio_cuts_PU, CSV_cuts_PU, cut_bins, 0.3, pT_Cut=1200, pT_Mode="jet",BG=True)
-
+	'''
 
 	#comparison of different ANN models
+
+	from sklearn.metrics import roc_curve
+	import keras as kr
+	print "packages imported"
+
+	'''
+	#noPU both
+	model = kr.models.load_model("Submitted_Models/model_noPU_both.h5")
+	model_type = "functional"
+	print "model loaded"
+
+	x_data = np.load("Submitted_Models/data/noPU_both_withPT/test_x.npy")
+	CSV = np.load("Submitted_Models/data/noPU_both_withPT/test_CSV.npy")
+	labels = np.load("Submitted_Models/data/noPU_both_withPT/test_y.npy")
+	pT = np.load("Submitted_Models/data/noPU_both_withPT/test_feature.npy")
+	print "data loaded"
+	'''
+	#withPU both
+	model = kr.models.load_model("Submitted_Models/model_withPU_both.h5")
+        model_type = "functional"
+	print "model loaded"
+	
+	x_data = np.load("Submitted_Models/data/withPU_both_withPT/test_x.npy")
+	CSV = np.load("Submitted_Models/data/withPU_both_withPT/test_CSV.npy")
+	labels = np.load("Submitted_Models/data/withPU_both_withPT/test_y.npy")
+	pT = np.load("Submitted_Models/data/withPU_both_withPT/test_feature.npy")
+	print "data loaded"
+
+	'''	
+	pred_y = model.predict(ANN_functional_shape(x_data))
+	fpr, tpr, thr = roc_curve(np.array(labels),pred_y)
+	fpr2, tpr2, thr2 = roc_curve(np.array(labels),CSV)
+	plt.figure()
+	plt.plot(tpr,1-fpr,label='ANN')
+	plt.plot(tpr2,1-fpr2,label='CSV')
+	plt.legend(loc=3)
+	plt.show()
+	'''
+
+	signal_x_data = x_data[labels==1]
+	signal_pT = pT[labels==1]
+	signal_CSV = CSV[labels==1]
+	bg_x_data = x_data[labels==0]
+	bg_pT = pT[labels==0]
+	bg_CSV = CSV[labels==0]
+	'''
+	#ANN_Make_Binned_ROC_histograms("Signal_ANN",model, signal_x_data, signal_pT, signal_CSV, cut_bins)
+	#ANN_Make_Binned_ROC_histograms("BG_ANN",model, bg_x_data, bg_pT, bg_CSV, cut_bins)
+
+	#FCM.find_cuts('Thesis_Plots/root_files/BG_ANN_histograms.root',cut_bins,ANN=True)
+	
+	#ANN_cuts = [0.583, 0.617, 0.633, 0.65, 0.65, 0.65, 0.683, 0.667, 0.667] used the wrong model when making these!!
+	ANN_cuts = [0.55, 0.583, 0.6, 0.667, 0.633, 0.6, 0.7, 0.667, 0.567]
+	CSV_cuts = [0.633, 0.65, 0.667, 0.7, 0.667, 0.7, 0.817, 0.817, 0.767]
+	
+	datalist = [(signal_x_data, signal_pT, signal_CSV, "Signal", (0,2500)),(bg_x_data, bg_pT, bg_CSV, "BG", (0,2500))]
+	#ANN_binned_tagged_jets_hist(datalist, model, ANN_cuts, CSV_cuts, cut_bins, 60, mode="pT_jet",Save=True)
+
+	tagged_ANN_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_SignalANN.root")
+	bg_tagged_ANN_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_BGANN.root")
+	binned_AllJets_thist = 		FCM.RebinHist(tagged_ANN_file.Get('Signal_AllJets'),"AllJets",plot_bins)   							#tagged_ANN_file.Get('Signal_AllJets')		
+        binned_CSV_thist = 		FCM.RebinHist(tagged_ANN_file.Get('Signal_CSV'),"CSV",plot_bins)           							#tagged_ANN_file.Get('Signal_CSV')		
+        binned_ANN_thist = 		FCM.RebinHist(tagged_ANN_file.Get('Signal_Discriminant'),"ANN",plot_bins)							#tagged_ANN_file.Get('Signal_Discriminant')	
+	binned_bg_AllJets_thist = 	FCM.RebinHist(bg_tagged_ANN_file.Get('BG_AllJets'),"AllJets",plot_bins)    							#bg_tagged_ANN_file.Get('BG_AllJets')		
+        binned_bg_CSV_thist = 		FCM.RebinHist(bg_tagged_ANN_file.Get('BG_CSV'),"CSV",plot_bins)            							#bg_tagged_ANN_file.Get('BG_CSV')		
+        binned_bg_ANN_thist = 		FCM.RebinHist(bg_tagged_ANN_file.Get('BG_Discriminant'),"ANN",plot_bins) 							#bg_tagged_ANN_file.Get('BG_Discriminant')	
+	
+	#ANN_exclusive_tagged_jets_hist('Signal_ANN', x_data, pT, CSV, ANN_cuts, CSV_cuts, cut_bins, (0,2500), 60, mode="pT_jet", y_max=320, Save=True)
+	coarse_bins = [0,1200,1500,2500]	
+	#ANN_Make_Binned_ROC_histograms("Signal_ANN",model, signal_x_data, signal_pT, signal_CSV, coarse_bins)
+	#ANN_Make_Binned_ROC_histograms("BG_ANN",model, bg_x_data, bg_pT, bg_CSV, coarse_bins)
+
+	#Make_Binned_ROC_Curves('binned_ANN','Signal_ANN','BG_ANN',coarse_bins, log=True, ANN=True)
+
+
+	Signal_compare, Background_compare = ANN_x_pT_CSV_label_to_clusterdata(x_data, pT, CSV, labels)
+
+	#efficient_Make_Binned_ROC_histograms('Signal_compare', Signal_compare, cut_bins)    
+        #efficient_Make_Binned_ROC_histograms('BG_compare', Background_compare, cut_bins)
+	
+	#FCM.find_cuts('Thesis_Plots/root_files/BG_compare_histograms.root',cut_bins)
+	
+	ratio_cuts = [1.833, 1.833, 2.0, 2.0, 2.0, 2.0, 2.167, 2.0, 2.167]
+
+        #efficient_binned_tagged_jets_hist([(Signal_compare, "Signal_compare",(0,2500))],"L4_L1", ratio_cuts, CSV_cuts, cut_bins, 60, Difference=False, mode="pT_jet",Save=True)
+        #efficient_binned_tagged_jets_hist([(Background_compare, "BG_compare",(0,2500))],"L4_L1", ratio_cuts, CSV_cuts, cut_bins, 60, Difference=False, mode="pT_jet",Save=True)
+	
+	#binned_exclusive_tagged_jets_hist("Signal_compare",Signal_compare, "L4/L1", ratio_cuts, CSV_cuts, cut_bins, (0,2500), 60, Difference=False, mode="pT_jet", y_max = 320, Save=True)
+		
+        compare_tagged_ratio_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_Signal_compareL4_L1.root")
+        compare_bg_tagged_ratio_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_BG_compareL4_L1.root")
+        binned_ratio_thist = 		FCM.RebinHist(compare_tagged_ratio_file.Get('Signal_compare_Discriminant'),"L4/L1",plot_bins)	#compare_tagged_ratio_file.Get('Signal_compare_Discriminant')	
+        binned_bg_ratio_thist = 	FCM.RebinHist(compare_bg_tagged_ratio_file.Get('BG_compare_Discriminant'),"L4/L1",plot_bins)   #compare_bg_tagged_ratio_file.Get('BG_compare_Discriminant')	
+
+	#Efficiency_vs_pT("Signal_ANN_vs_L4_L1",[(binned_ANN_thist,"ANN"),(binned_ratio_thist,"L4/L1"),(binned_CSV_thist,"CSV")], binned_AllJets_thist, 0.6, Save=True,legend_shift=True)
+        #Efficiency_vs_pT("Background_ANN_vs_L4_L1",[(binned_bg_ANN_thist,"ANN"),(binned_bg_ratio_thist,"L4/L1"),(binned_bg_CSV_thist,"CSV")], binned_bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True)
+
+	#DrawHistograms([(binned_AllJets_thist,"all jets"), (binned_ANN_thist, "ANN"),(binned_ratio_thist, "L4/L1"),(binned_CSV_thist,"CSV")], (0,2500), "ANN_vs_L4_L1_tagged_jets_vs_pT_binned", 'jet-pT', "# jets", Save=True,Normalize=False)
+	'''
+
 
 
 	#PU study of ANNs
 
+	#ANN_Make_Binned_ROC_histograms("Signal_ANN_PU",model, signal_x_data, signal_pT, signal_CSV, cut_bins)
+	#ANN_Make_Binned_ROC_histograms("BG_ANN_PU",model, bg_x_data, bg_pT, bg_CSV, cut_bins)
+	#FCM.find_cuts('Thesis_Plots/root_files/BG_ANN_PU_histograms.root',cut_bins,ANN=True)
 
+	Signal_compare, Background_compare = ANN_x_pT_CSV_label_to_clusterdata(x_data, pT, CSV, labels)
+	#efficient_Make_Binned_ROC_histograms('Signal_PU_compare', Signal_compare, cut_bins)    
+        #efficient_Make_Binned_ROC_histograms('BG_PU_compare', Background_compare, cut_bins)
+	#FCM.find_cuts('Thesis_Plots/root_files/BG_PU_compare_histograms.root',cut_bins)
+	
+	ANN_cuts = [0.583, 0.6, 0.617, 0.633, 0.633, 0.667, 0.633, 0.617, 0.717]
+	CSV_cuts = [0.65, 0.667, 0.7, 0.7, 0.683, 0.7, 0.667, 0.683, 0.6]
+	ratio_cuts = [1.833, 2.0, 2.0, 2.167, 2.0, 2.167, 2.167, 2.167, 3.167]
+
+
+	datalist = [(signal_x_data, signal_pT, signal_CSV, "Signal_PU", (0,2500)),(bg_x_data, bg_pT, bg_CSV, "BG_PU", (0,2500))]
+	#ANN_binned_tagged_jets_hist(datalist, model, ANN_cuts, CSV_cuts, cut_bins, 60, mode="pT_jet",Save=True)
+	tagged_ANN_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_Signal_PUANN.root")
+	bg_tagged_ANN_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_BG_PUANN.root")
+	binned_AllJets_thist = 		FCM.RebinHist(tagged_ANN_file.Get('Signal_PU_AllJets'),"AllJets",plot_bins)   							#tagged_ANN_file.Get('Signal_PU_AllJets')	
+        binned_CSV_thist = 		FCM.RebinHist(tagged_ANN_file.Get('Signal_PU_CSV'),"CSV",plot_bins)           							#tagged_ANN_file.Get('Signal_PU_CSV')		
+        binned_ANN_thist = 		FCM.RebinHist(tagged_ANN_file.Get('Signal_PU_Discriminant'),"ANN",plot_bins)							#tagged_ANN_file.Get('Signal_PU_Discriminant')	
+	binned_bg_AllJets_thist = 	FCM.RebinHist(bg_tagged_ANN_file.Get('BG_PU_AllJets'),"AllJets",plot_bins)    							#bg_tagged_ANN_file.Get('BG_PU_AllJets')	
+        binned_bg_CSV_thist = 		FCM.RebinHist(bg_tagged_ANN_file.Get('BG_PU_CSV'),"CSV",plot_bins)            							#bg_tagged_ANN_file.Get('BG_PU_CSV')		
+        binned_bg_ANN_thist = 		FCM.RebinHist(bg_tagged_ANN_file.Get('BG_PU_Discriminant'),"ANN",plot_bins) 							#bg_tagged_ANN_file.Get('BG_PU_Discriminant')	
+	#efficient_binned_tagged_jets_hist([(Signal_compare, "Signal_PU_compare",(0,2500)),(Background_compare, "BG_PU_compare",(0,2500))],"L4_L1", ratio_cuts, CSV_cuts, cut_bins, 60, Difference=False, mode="pT_jet",Save=True)
+	compare_tagged_ratio_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_Signal_PU_compareL4_L1.root")
+        compare_bg_tagged_ratio_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_BG_PU_compareL4_L1.root")
+        binned_ratio_thist = 		FCM.RebinHist(compare_tagged_ratio_file.Get('Signal_PU_compare_Discriminant'),"L4/L1",plot_bins)	#compare_tagged_ratio_file.Get('Signal_PU_compare_Discriminant')	
+        binned_bg_ratio_thist = 	FCM.RebinHist(compare_bg_tagged_ratio_file.Get('BG_PU_compare_Discriminant'),"L4/L1",plot_bins)   #compare_bg_tagged_ratio_file.Get('BG_PU_compare_Discriminant')		
+
+	#DrawHistograms([(binned_AllJets_thist,"all jets"), (binned_ANN_thist, "ANN"),(binned_ratio_thist, "L4/L1"),(binned_CSV_thist,"CSV")], (0,2500), "ANN_vs_L4_L1_PU_tagged_jets_vs_pT_binned", 'jet-pT', "# jets", Save=True,Normalize=False)	
+	
+	#Efficiency_vs_pT("Signal_PU_ANN_vs_L4_L1",[(binned_ANN_thist,"ANN"),(binned_ratio_thist,"L4/L1"),(binned_CSV_thist,"CSV")], binned_AllJets_thist, 0.8, Save=True,legend_shift=True)
+        #Efficiency_vs_pT("Background_PU_ANN_vs_L4_L1",[(binned_bg_ANN_thist,"ANN"),(binned_bg_ratio_thist,"L4/L1"),(binned_bg_CSV_thist,"CSV")], binned_bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True)
+
+
+	ANN_efficiency_vs_PU("ANN_vs_L4_L1", signal_x_data, signal_pT, signal_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.8, pT_Cut=200, BG=False)
+	ANN_efficiency_vs_PU("ANN_vs_L4_L1_BG", bg_x_data, bg_pT, bg_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.3, pT_Cut=200, BG=True)
+
+	ANN_efficiency_vs_PU("ANN_vs_L4_L1", signal_x_data, signal_pT, signal_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.8, pT_Cut=1200, BG=False)
+	ANN_efficiency_vs_PU("ANN_vs_L4_L1_BG", bg_x_data, bg_pT, bg_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.3, pT_Cut=1200, BG=True)
+	
 	#for appendix: correlation plots between decayvx and pT. also jet-pT vs hadron-pT
 		
 		
 	#also for appendix: differece between hadron and quark
+	'''
+	QuarkHadronComparison(Signal_2TeV_noPU_String_list, "2TeV", 0.1, 350, BG=False, EarlyBreak=0)
+        QuarkHadronComparison(Signal_4TeV_noPU_String_list, "4TeV", 0.1, 350, BG=False, EarlyBreak=0)
+	'''
 
 
-        
+
