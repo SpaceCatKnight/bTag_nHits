@@ -14,10 +14,10 @@ print "packages imported"
 
 #different models
 
-def build_model():
+def build_model(cone_nr=5):
 	model = kr.models.Sequential()
 
-	model.add(kr.layers.Dense(150, activation = 'relu', input_shape=(20,)))
+	model.add(kr.layers.Dense(150, activation = 'relu', input_shape=(cone_nr*4,)))
 	model.add(kr.layers.Dropout(0.5))
 	
 	model.add(kr.layers.Dense(150, activation = 'relu'))
@@ -60,7 +60,7 @@ def build_conv_model():
 	model.compile(optimizer='adagrad',loss='binary_crossentropy',metrics=['accuracy'])
 	return model
 
-def build_functional_model():
+def build_functional_model(Additional_Input=False):
 	Li_inputs = kr.layers.Input(shape=(5,4,1))
 	Li_Lj_inputs = kr.layers.Input(shape=(5,))
 	
@@ -70,7 +70,12 @@ def build_functional_model():
 	Li_Lj_branch = kr.layers.Dense(150, activation='relu')(Li_Lj_inputs)
 	Li_Lj_branch = kr.layers.Dropout(0.5)(Li_Lj_branch)
 
-	x = kr.layers.concatenate([Li_branch, Li_Lj_branch],axis=1)
+	if Additional_Input:
+                add_input = kr.layers.Input(shape=(1,))
+                x = kr.layers.concatenate([Li_branch, Li_Lj_branch, add_input],axis=1)
+        else:
+                x = kr.layers.concatenate([Li_branch, Li_Lj_branch],axis=1)
+
 	x = kr.layers.Dense(150, activation='relu')(x)
 	x = kr.layers.Dropout(0.5)(x)
 	x = kr.layers.Dense(150, activation='relu')(x)
@@ -82,7 +87,10 @@ def build_functional_model():
 
 	output = kr.layers.Dense(1, activation ='sigmoid')(x)	 
 
-	model = kr.models.Model(inputs=[Li_inputs, Li_Lj_inputs], outputs=output)
+	if Additional_Input:
+		model = kr.models.Model(inputs=[Li_inputs, Li_Lj_inputs, add_input], outputs=output)
+	else:
+		model = kr.models.Model(inputs=[Li_inputs, Li_Lj_inputs], outputs=output)
 	model.compile(optimizer='adagrad',loss='binary_crossentropy',metrics=['accuracy'])
 	return model
 
@@ -200,6 +208,12 @@ def Compare_ANNs():
 	plt.savefig("ANN_data/ANNs_ROC2_log.png")
 	plt.show()
 
+def CoarseGrainArray(old_array,res):
+	new_array = np.zeros(len(old_array)/res)
+	for i in range(len(old_array)/res):
+		new_array[i] = np.mean(old_array[i*res:(i+1)*res])
+	return new_array
+
 if __name__ == "__main__":
 
 	if len(sys.argv) > 1: title = sys.argv[1]
@@ -207,12 +221,31 @@ if __name__ == "__main__":
 	if len(sys.argv) > 3: addFeature = sys.argv[3]
 	if len(sys.argv) > 4: nEpochs = int(sys.argv[4])
 	if len(sys.argv) > 5: modenr = int(sys.argv[5])
+	if len(sys.argv) > 6: 
+		modeltype = sys.argv[6]
+	else:
+		modeltype = "complex_functional"
 
 	#initialize model
-	if addFeature == "No":
-		model = build_complex_functional_model(Additional_Input=False)
-	else:
-		model = build_complex_functional_model(Additional_Input=True)
+	if modeltype == "simple":
+		if modenr <=1:
+			model = build_model(cone_nr=1)
+		elif modenr ==2:
+			model = build_model(cone_nr=2)
+		else:
+			model = build_model(cone_nr=5)
+	elif modeltype == "conv":
+		model = build_conv_model()
+	elif modeltype == "functional":
+		if addFeature == "No":
+			model = build_functional_model(Additional_Input=False)
+		else:
+			model = build_functional_model(Additional_Input=True)
+	elif modeltype == "complex_functional":
+		if addFeature == "No":
+			model = build_complex_functional_model(Additional_Input=False)
+		else:
+			model = build_complex_functional_model(Additional_Input=True)
 
 
 	#preprocess data
@@ -231,47 +264,90 @@ if __name__ == "__main__":
 	m_train = train_x.shape[0]
 	m_test = test_x.shape[0]
 	
-	test_x_Li_Lj=discriminants(test_x)
-	train_x_Li_Lj=discriminants(train_x)
-	test_x_Li = np.reshape(test_x[:,:20].flatten(),(-1,5,4,1))
-	train_x_Li = np.reshape(train_x[:,:20].flatten(),(-1,5,4,1))
-	test_x_PU = test_x[:,-1]
-	train_x_PU = train_x[:,-1]
-
-	if addFeature == 'PV':
-		from WeightFunctions import reweight
-		weights = reweight(train_feature, train_y, "PU", modenr)
-
-		test_feature = test_feature/10
-		train_feature = train_feature/10
+	if modeltype == "simple":
+		if modenr == 0:
+			test_x_Li = test_x[:,:4]
+			train_x_Li = train_x[:,:4]
+		elif modenr == 1:
+			test_x_Li = test_x[:,12:16]
+			train_x_Li = train_x[:,12:16]
+		elif modenr == 2:
+			test_x_Li = np.hstack((test_x[:,:4], test_x[:,12:16]))
+			train_x_Li = np.hstack((train_x[:,:4], train_x[:,12:16]))
+		else:
+			test_x_Li = test_x[:,:20]
+			train_x_Li = train_x[:,:20]
+	else:	
+		test_x_Li_Lj=discriminants(test_x)
+		train_x_Li_Lj=discriminants(train_x)
+		test_x_Li = np.reshape(test_x[:,:20].flatten(),(-1,5,4,1))
+		train_x_Li = np.reshape(train_x[:,:20].flatten(),(-1,5,4,1))
+		test_x_PU = test_x[:,-1]
+		train_x_PU = train_x[:,-1]
 	
-	elif addFeature == 'pT':
-		from WeightFunctions import reweight
-		weights = reweight(train_feature, train_y, "jet_pT", modenr)
+	if modeltype == "functional":
+		if addFeature == 'PV':
+			from WeightFunctions import reweight
+			weights = reweight(train_feature, train_y, "PU", 6)
+	
+			test_feature = test_feature/10
+			train_feature = train_feature/10
+		
+		elif addFeature == 'pT':
+			if modenr == 1:
+				from WeightFunctions import reweight                        	
+                                weights = reweight(train_feature, train_y, "jet_pT", 1)
+			elif modenr == 3:
+				from WeightFunctions import reweight
+				weights = reweight(train_feature, train_y, "jet_pT", 5)
+	
+			train_feature = train_feature/200
+			test_feature = test_feature/200
 
-		train_feature = train_feature/200
-		test_feature = test_feature/200
-
-
-	if addFeature == "No":
-		history = model.fit([train_x_Li,train_x_Li_Lj], train_y, epochs=nEpochs, verbose=2, batch_size=32, validation_data=([test_x_Li,test_x_Li_Lj],test_y))
 	else:
-		history = model.fit([train_x_Li,train_x_Li_Lj,train_feature], train_y, epochs=nEpochs, verbose=2, batch_size=32, validation_data=([test_x_Li,test_x_Li_Lj,test_feature],test_y),sample_weight=weights)
+		if addFeature == 'PV':
+			from WeightFunctions import reweight
+			weights = reweight(train_feature, train_y, "PU", modenr)
+	
+			test_feature = test_feature/10
+			train_feature = train_feature/10
+		
+		elif addFeature == 'pT':
+			from WeightFunctions import reweight
+			weights = reweight(train_feature, train_y, "jet_pT", modenr)
+	
+			train_feature = train_feature/200
+			test_feature = test_feature/200
+	
+	if modeltype == "simple" or modeltype =="conv":
+		history = model.fit(train_x_Li, train_y, epochs=nEpochs, verbose=2, batch_size=32, validation_data=(test_x_Li,test_y))
+	else:
+		if addFeature == "No":
+			history = model.fit([train_x_Li,train_x_Li_Lj], train_y, epochs=nEpochs, verbose=2, batch_size=32, validation_data=([test_x_Li,test_x_Li_Lj],test_y))
+		else:
+			history = model.fit([train_x_Li,train_x_Li_Lj,train_feature], train_y, epochs=nEpochs, verbose=2, batch_size=32, validation_data=([test_x_Li,test_x_Li_Lj,test_feature],test_y),sample_weight=weights)
 
 	model.save("Submitted_Models/model_{}.h5".format(title))
 
+
+	no_of_epochs = len(history.history['loss'])
 	plt.figure('History')
-	plt.plot(history.history['loss'],label='training')
-	plt.plot(history.history['val_loss'],label='test')
+	plt.plot(range(no_of_epochs),history.history['loss'],'b--',label='training')
+	plt.plot(CoarseGrainArray(range(no_of_epochs),5),CoarseGrainArray(history.history['loss'],5),'b-',label='training_avg')
+	plt.plot(range(no_of_epochs),history.history['val_loss'],'g--',label='test')
+	plt.plot(CoarseGrainArray(range(no_of_epochs),5),CoarseGrainArray(history.history['val_loss'],5),'g-',label='test_avg')
 	plt.xlabel('epoch')
 	plt.ylabel('loss')
 	plt.legend(loc=2)
 	plt.savefig("Submitted_Models/history_{}.png".format(title))
 
-	if addFeature == "No":
-		pred_y = model.predict([test_x_Li,test_x_Li_Lj])
+	if modeltype == "simple" or modeltype == "conv":
+		pred_y = model.predict(test_x_Li)
 	else:
-		pred_y = model.predict([test_x_Li,test_x_Li_Lj,test_feature])
+		if addFeature == "No":
+			pred_y = model.predict([test_x_Li,test_x_Li_Lj])
+		else:
+			pred_y = model.predict([test_x_Li,test_x_Li_Lj,test_feature])
 	fpr, tpr, thresholds = roc_curve(test_y,pred_y)
 	fpr_csv, tpr_csv, thresholds_csv = roc_curve(test_y,test_CSV)
 

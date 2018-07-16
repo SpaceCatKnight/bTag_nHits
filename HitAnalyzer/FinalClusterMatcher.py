@@ -275,10 +275,10 @@ def Efficient_SeparateLayerHist(datalist, ran, dR,minPT=0,jet_pT=True, Save=Fals
         canvas.GetPad(4).SetTitle("Layer 4")
         Hist_list = [[],[],[],[]]
         for n, data in enumerate(datalist):
-                Hist_list[0].append(rt.TH1D("L1."+str(n),"L1",ran[1]-ran[0],ran[0],ran[1]))
-                Hist_list[1].append(rt.TH1D("L2."+str(n),"L2",ran[1]-ran[0],ran[0],ran[1]))
-                Hist_list[2].append(rt.TH1D("L3."+str(n),"L3",ran[1]-ran[0],ran[0],ran[1]))
-                Hist_list[3].append(rt.TH1D("L4."+str(n),"L4",ran[1]-ran[0],ran[0],ran[1]))
+                Hist_list[0].append(rt.TH1D("L1."+str(n),"Layer 1",ran[1]-ran[0],ran[0],ran[1]))
+                Hist_list[1].append(rt.TH1D("L2."+str(n),"Layer 2",ran[1]-ran[0],ran[0],ran[1]))
+                Hist_list[2].append(rt.TH1D("L3."+str(n),"Layer 3",ran[1]-ran[0],ran[0],ran[1]))
+                Hist_list[3].append(rt.TH1D("L4."+str(n),"Layer 4",ran[1]-ran[0],ran[0],ran[1]))
 		for particle in data[0]:
 			if particle[pT_tag] < minPT: continue
                 	Hist_list[0][n].Fill(particle[dR_tag])
@@ -288,20 +288,24 @@ def Efficient_SeparateLayerHist(datalist, ran, dR,minPT=0,jet_pT=True, Save=Fals
 
         for l,layer in enumerate(Hist_list):
                 canvas.cd(l+1)
-                legend = rt.TLegend(0.9,0.9,0.65,0.75)
+                if l==1: legend = rt.TLegend(0.999,0.999,0.65,0.75)
                 for n,Hist in enumerate(layer):
                         Hist.GetXaxis().SetTitle("# clusters")
                         Hist.GetYaxis().SetTitle('[a.u.]')
                         Hist.GetYaxis().SetTitleOffset(1.5)
+			#Hist.Scale(1/(Hist.Integral()))
+			#Hist.SetLineStyle(0)
+			#Hist.SetMaximum(0.12)
+			#Hist.SetMinimum(0)
                         Hist.SetLineColor(n+2)
-                        legend.AddEntry(Hist,datalist[n][1])
+                        if l==1: legend.AddEntry(Hist,datalist[n][1])
                         if n==0:
                                 Hist.DrawNormalized()
                         else:
                                 Hist.DrawNormalized("SAME")
-                legend.Draw()
-        if Save: canvas.SaveAs("SeparateLayerHistDR"+str(dR)+".png")
-        sleep(10)
+                	if l==1: legend.Draw()
+        if Save: canvas.SaveAs("Thesis_Plots/SeparateLayerHist.png")
+        #sleep(10)
 
 def efficient_binned_tagged_jets_hist(datalist,discriminant, discriminant_cuts, CSV_cuts, bins, nbins, Difference=False, mode="pT_hadron",Save=False):
 	"""creates a histogram for each dataset given as list of tuples (data, title, range) of all the jets that were b-tagged by passing a given a list of cut values corresponding to the given pT-bins for CSV and a given discriminant versus a feature given as string to 'mode'. The histograms are saved to a root file for further use."""
@@ -571,7 +575,7 @@ def bin_selection(particle,bins):
 			bin_number =  n
 	return bin_number
 	
-def efficient_Make_Binned_ROC_histograms(title, data, bins):
+def efficient_Make_Binned_ROC_histograms(title, data, bins, PU_range='full'):
 	"""uses data made by Efficient_Cluster_Matcher() and creates for L4-L1, L4/L1 and CSV one histograms each given (jet-)pT-bin. The histograms are saved as root files for reuse by the Make_ROC_Curves() function"""
 	diff_ran = (-25,25)
 	diff_bins = diff_ran[1]-diff_ran[0]
@@ -589,15 +593,17 @@ def efficient_Make_Binned_ROC_histograms(title, data, bins):
 		ZeroDiv_list.append(0)
 	
 	for particle in data:
+		if PU_range != 'full':
+			if particle[-1]<PU_range[0] or particle[-1]>PU_range[1]: continue
 		bin_number = bin_selection(particle,bins)
 		if bin_number == -100: continue
 		
 		Diff_hist_list[bin_number].Fill(particle[8]-particle[5])
 		CSV_hist_list[bin_number].Fill(particle[1])
-		try:
+		if particle[17] != 0:
 			L4_L1 = particle[20]/particle[17]
 			Ratio_hist_list[bin_number].Fill(L4_L1)
-		except ZeroDivisionError:
+		else:
 			ZeroDiv_list[bin_number] += 1
 
 	tfile = rt.TFile("histogram_files/{}_binned_histograms.root".format(title),"recreate")
@@ -615,20 +621,29 @@ def efficient_Make_Binned_ROC_histograms(title, data, bins):
 	csv_file.close()
 	print "saved zero division occurences in histogram_files/{}_binned_ZeroDiv.csv".format(title)
 
-def find_cuts(file_path,bins):
+def find_cuts(file_path,bins,ZeroDiv_path=None,ANN=False):
 	"""given a pre-made root file containing binned ROC histograms (made by efficient_Make_Binned_ROC_histograms()) and the corresponding list of bins, it returns the 10% mistag rate cut on L4-L1, L4/L1 and CSV for each bin"""
 	File = rt.TFile.Open(file_path)
 	diff_ran = (-25,25)
         diff_bins = diff_ran[1]-diff_ran[0]
         ratio_ran = (0,10)
         ratio_bins = 60
+	if ZeroDiv_path == None:
+		ZeroDiv = np.zeros(len(bins)-1)
+	else:
+		ZeroDiv = np.loadtxt(ZeroDiv_path,delimiter=',')
+
 	for bin_ in range(len(bins)-1):
 		print "\n"
 		print "cuts for bin {}_{}: \n".format(bins[bin_],bins[bin_+1])
-		print "Delta:"
-		Get_ROC_Efficiencies(File.Get("L4-L1_"+str(bins[bin_])+"_"+str(bins[bin_+1])),diff_ran,diff_bins,0,print_cut=True)
-		print "Ratio:"
-		Get_ROC_Efficiencies(File.Get("L4_L1_"+str(bins[bin_])+"_"+str(bins[bin_+1])),ratio_ran,ratio_bins,0,print_cut=True)
+		if ANN:
+			print "ANN:"
+			Get_ROC_Efficiencies(File.Get("ANN_"+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),ratio_bins,0,print_cut=True)
+		else:
+			print "Delta:"
+			Get_ROC_Efficiencies(File.Get("L4-L1_"+str(bins[bin_])+"_"+str(bins[bin_+1])),diff_ran,diff_bins,0,print_cut=True)
+			print "Ratio:"
+			Get_ROC_Efficiencies(File.Get("L4_L1_"+str(bins[bin_])+"_"+str(bins[bin_+1])),ratio_ran,ratio_bins,ZeroDiv[bin_],print_cut=True)
 		print "CSV:"
 		Get_ROC_Efficiencies(File.Get("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),ratio_bins,0,print_cut=True)
 		print "\n"
@@ -637,7 +652,10 @@ def Make_Binned_ROC_Curves(title,Signal_title,Background_title,bins,log=False):
 	#hsv = plt.get_cmap('hsv')
 	#color = hsv(np.linspace(0,1.0,len(bins)-1))
 	#color = ['b', 'g', 'r', 'c', 'm', 'y']
-	color = ['rosybrown','firebrick','red','olivedrab','chartreuse','lightseagreen','deepskyblue','royalblue','navy','blue','darkorchid','mediumvioletred']
+	if len(bins)<=6:
+		color = ['red','green','blue','orange','brown']
+	else:
+		color = ['deepskyblue','rosybrown','olivedrab','royalblue','firebrick','chartreuse','navy','red','darkorchid','lightseagreen','mediumvioletred','blue']
 	ratio_ran = (0,10)
         ratio_bins = 60	
 	
@@ -655,10 +673,10 @@ def Make_Binned_ROC_Curves(title,Signal_title,Background_title,bins,log=False):
 	plt.clf()
 
 	for bin_ in range(len(bins)-1):
-		Ratio_Signal_Eff = Get_ROC_Efficiencies(Signal_file.Get("L4_L1_"+str(bins[bin_])+"_"+str(bins[bin_+1])),ratio_ran,ratio_bins,Signal_ZeroDiv[bin_])
-		Ratio_BG_Eff = Get_ROC_Efficiencies(Background_file.Get("L4_L1_"+str(bins[bin_])+"_"+str(bins[bin_+1])),ratio_ran,ratio_bins,Background_ZeroDiv[bin_])
-		CSV_Signal_Eff = Get_ROC_Efficiencies(Signal_file.Get("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1])),ratio_ran,ratio_bins,0)
-		CSV_BG_Eff = Get_ROC_Efficiencies(Background_file.Get("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1])),ratio_ran,ratio_bins,0)
+		Ratio_Signal_Eff = Get_ROC_Efficiencies(Signal_file.Get("L4_L1_"+str(bins[bin_])+"_"+str(bins[bin_+1])),ratio_ran,ratio_bins,0)#,Signal_ZeroDiv[bin_])
+		Ratio_BG_Eff = Get_ROC_Efficiencies(Background_file.Get("L4_L1_"+str(bins[bin_])+"_"+str(bins[bin_+1])),ratio_ran,ratio_bins,0)#,Background_ZeroDiv[bin_])
+		CSV_Signal_Eff = Get_ROC_Efficiencies(Signal_file.Get("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),ratio_bins,0)
+		CSV_BG_Eff = Get_ROC_Efficiencies(Background_file.Get("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),ratio_bins,0)
 		if log:
 			plt.semilogy(Ratio_Signal_Eff,Ratio_BG_Eff, color = color[bin_], linestyle = '-',label=str(bins[bin_])+"_"+str(bins[bin_+1]))
 			plt.semilogy(CSV_Signal_Eff,CSV_BG_Eff, color = color[bin_],linestyle = '-.',)
@@ -686,7 +704,7 @@ def Make_Binned_ROC_Curves(title,Signal_title,Background_title,bins,log=False):
 	
 	plt.savefig("ROC/{}_ROC_Curves.png".format(title))
 	print "saved as ROC/{}_ROC_Curves.png".format(title)
-	plt.show()
+	#plt.show()
 	'''
 	plt.figure("Log_ROC")
 	plt.clf()
@@ -717,35 +735,35 @@ def Make_ROC_Curves(title,Signal_title,Background_title,diff_ran,ratio_ran,ratio
 
 	Background_ZeroDiv = np.loadtxt("histogram_files/{}_ZeroDiv.csv".format(Background_title),delimiter=',')
 	Background_file = 		rt.TFile("histogram_files/{}_histograms.root".format(Background_title),"READ")
-	print "L4-L1"
-	Background_Diff_eff =  		Get_ROC_Efficiencies(Background_file.Get("L4-L1"),diff_ran,diff_bins,0,print_cut=True)
-	print "L4-L1_pTH"
-	Background_Diff_eff_hadron_pT = Get_ROC_Efficiencies(Background_file.Get("L4-L1_pTH"),diff_ran,diff_bins,0,print_cut=True)
-	print "L4-L1_pTJ"
-	Background_Diff_eff_jet_pT = 	Get_ROC_Efficiencies(Background_file.Get("L4-L1_pTJ"),diff_ran,diff_bins,0,print_cut=True)
+	#print "L4-L1"
+	#Background_Diff_eff =  		Get_ROC_Efficiencies(Background_file.Get("L4-L1"),diff_ran,diff_bins,0,print_cut=True)
+	#print "L4-L1_pTH"
+	#Background_Diff_eff_hadron_pT = Get_ROC_Efficiencies(Background_file.Get("L4-L1_pTH"),diff_ran,diff_bins,0,print_cut=True)
+	#print "L4-L1_pTJ"
+	#Background_Diff_eff_jet_pT = 	Get_ROC_Efficiencies(Background_file.Get("L4-L1_pTJ"),diff_ran,diff_bins,0,print_cut=True)
 	print "L4_L1"
 	Background_Ratio_eff = 		Get_ROC_Efficiencies(Background_file.Get("L4_L1"),ratio_ran,ratio_bins,Background_ZeroDiv[0],print_cut=True)
-	print "L4_L1_pTH"
-	Background_Ratio_eff_hadron_pT=	Get_ROC_Efficiencies(Background_file.Get("L4_L1_pTH"),ratio_ran,ratio_bins,Background_ZeroDiv[1],print_cut=True)
+	#print "L4_L1_pTH"
+	#Background_Ratio_eff_hadron_pT=	Get_ROC_Efficiencies(Background_file.Get("L4_L1_pTH"),ratio_ran,ratio_bins,Background_ZeroDiv[1],print_cut=True)
 	print "L4_L1_pTJ"
 	Background_Ratio_eff_jet_pT = 	Get_ROC_Efficiencies(Background_file.Get("L4_L1_pTJ"),ratio_ran,ratio_bins,Background_ZeroDiv[2],print_cut=True)
 	print "CSV"
 	Background_CSV_eff = 		Get_ROC_Efficiencies(Background_file.Get("CSV"),(0,1),ratio_bins,0,print_cut=True)
-        print "CSV_pTH"
-	Background_CSV_eff_hadron_pT =	Get_ROC_Efficiencies(Background_file.Get("CSV_pTH"),(0,1),ratio_bins,0,print_cut=True)
+        #print "CSV_pTH"
+	#Background_CSV_eff_hadron_pT =	Get_ROC_Efficiencies(Background_file.Get("CSV_pTH"),(0,1),ratio_bins,0,print_cut=True)
 	print "CSV_pTJ"
 	Background_CSV_eff_jet_pT = 	Get_ROC_Efficiencies(Background_file.Get("CSV_pTJ"),(0,1),ratio_bins,0,print_cut=True)
 	plt.figure("ROC")
 	plt.clf()
-	plt.plot(Signal_Diff_eff,1-Background_Diff_eff,'r-',label='L4-L1')
-	plt.plot(Signal_Diff_eff_hadron_pT,1-Background_Diff_eff,'r-.',label='L4-L1_pTH'+str(pT_cut))
-	plt.plot(Signal_Diff_eff_jet_pT,1-Background_Diff_eff,'r--',label='L4-L1_pTJ'+str(pT_cut))
+	#plt.plot(Signal_Diff_eff,1-Background_Diff_eff,'r-',label='L4-L1')
+	#plt.plot(Signal_Diff_eff_hadron_pT,1-Background_Diff_eff_hadron_pT,'r-.',label='L4-L1_pTH'+str(pT_cut))
+	#plt.plot(Signal_Diff_eff_jet_pT,1-Background_Diff_eff_jet_pT,'r--',label='L4-L1_pTJ'+str(pT_cut))
 	plt.plot(Signal_Ratio_eff,1-Background_Ratio_eff,'b-',label='L4_L1')
-	plt.plot(Signal_Ratio_eff_hadron_pT,1-Background_Ratio_eff,'b-.',label='L4_L1_pTH'+str(pT_cut))
-	plt.plot(Signal_Ratio_eff_jet_pT,1-Background_Ratio_eff,'b--',label='L4_L1_pTJ'+str(pT_cut))
+	#plt.plot(Signal_Ratio_eff_hadron_pT,1-Background_Ratio_eff_hadron_pT,'b-.',label='L4_L1_pTH'+str(pT_cut))
+	plt.plot(Signal_Ratio_eff_jet_pT,1-Background_Ratio_eff_jet_pT,'b--',label='L4_L1_pTJ'+str(pT_cut))
 	plt.plot(Signal_CSV_eff,1-Background_CSV_eff,'g-',label='CSV')
-        plt.plot(Signal_CSV_eff_hadron_pT,1-Background_CSV_eff,'g-.',label='CSV_pTH'+str(pT_cut))
-        plt.plot(Signal_CSV_eff_jet_pT,1-Background_CSV_eff,'g--',label='CSV_pTJ'+str(pT_cut))
+        #plt.plot(Signal_CSV_eff_hadron_pT,1-Background_CSV_eff_hadron_pT,'g-.',label='CSV_pTH'+str(pT_cut))
+        plt.plot(Signal_CSV_eff_jet_pT,1-Background_CSV_eff_jet_pT,'g--',label='CSV_pTJ'+str(pT_cut))
 	plt.plot([0,1],[0.9,0.9],'k:',label="10% mistag")
 	plt.xlabel(r"$\epsilon$_signal")
 	plt.ylabel(r"1-$\epsilon$_background")
@@ -754,15 +772,15 @@ def Make_ROC_Curves(title,Signal_title,Background_title,diff_ran,ratio_ran,ratio
 	plt.savefig("ROC/{}_ROC_Curves.png".format(title))
 	plt.figure("Log_ROC")
 	plt.clf()
-	plt.semilogy(Signal_Diff_eff,Background_Diff_eff,'r-',label='L4-L1')
-	plt.semilogy(Signal_Diff_eff_hadron_pT,Background_Diff_eff,'r-.',label='L4-L1_pTH'+str(pT_cut))
-	plt.semilogy(Signal_Diff_eff_jet_pT,Background_Diff_eff,'r--',label='L4-L1_pTJ'+str(pT_cut))
+	#plt.semilogy(Signal_Diff_eff,Background_Diff_eff,'r-',label='L4-L1')
+	#plt.semilogy(Signal_Diff_eff_hadron_pT,Background_Diff_eff_hadron_pT,'r-.',label='L4-L1_pTH'+str(pT_cut))
+	#plt.semilogy(Signal_Diff_eff_jet_pT,Background_Diff_eff_jet_pT,'r--',label='L4-L1_pTJ'+str(pT_cut))
 	plt.semilogy(Signal_Ratio_eff,Background_Ratio_eff,'b-',label='L4_L1')
-	plt.semilogy(Signal_Ratio_eff_hadron_pT,Background_Ratio_eff,'b-.',label='L4_L1_pTH'+str(pT_cut))
-	plt.semilogy(Signal_Ratio_eff_jet_pT,Background_Ratio_eff,'b--',label='L4_L1_pTJ'+str(pT_cut))
+	#plt.semilogy(Signal_Ratio_eff_hadron_pT,Background_Ratio_eff_hadron_pT,'b-.',label='L4_L1_pTH'+str(pT_cut))
+	plt.semilogy(Signal_Ratio_eff_jet_pT,Background_Ratio_eff_jet_pT,'b--',label='L4_L1_pTJ'+str(pT_cut))
 	plt.semilogy(Signal_CSV_eff,Background_CSV_eff,'g-',label='CSV')
-        plt.semilogy(Signal_CSV_eff_hadron_pT,Background_CSV_eff,'g-.',label='CSV_pTH'+str(pT_cut))
-        plt.semilogy(Signal_CSV_eff_jet_pT,Background_CSV_eff,'g--',label='CSV_pTJ'+str(pT_cut))
+        #plt.semilogy(Signal_CSV_eff_hadron_pT,Background_CSV_eff_hadron_pT,'g-.',label='CSV_pTH'+str(pT_cut))
+        plt.semilogy(Signal_CSV_eff_jet_pT,Background_CSV_eff_jet_pT,'g--',label='CSV_pTJ'+str(pT_cut))
 	plt.semilogy([0,1],[0.1,0.1],'k:',label="10% mistag")
 	plt.xlabel(r"$\epsilon$_signal")
 	plt.ylabel(r"$\epsilon$_background")
@@ -832,7 +850,7 @@ def Efficient_Cluster_Matcher(title, file_path, MomentumThreshold, BG=False, Ear
                 if i % 100 == 0: print "Working on event " ,i
 		if i != 0 and i%10000==0:
 			print "saving file - do not abort computation now!" 
-			np.save("/afs/cern.ch/user/m/msommerh/CMSSW_9_4_0_patch1/src/bTag_nHits/HitAnalyzer/matched_clusters/MatchedClusters_{}.npy".format(title),HitClusters)	
+			#np.save("/afs/cern.ch/user/m/msommerh/CMSSW_9_4_0_patch1/src/bTag_nHits/HitAnalyzer/matched_clusters/MatchedClusters_{}.npy".format(title),HitClusters)	
 			print "saved as matched_clusters/MatchedClusters_{}.npy".format(title)
 			if Protocol: writer.writerow([title,i,N])
                 tree.GetEntry(i)
@@ -882,7 +900,7 @@ def Efficient_Cluster_Matcher(title, file_path, MomentumThreshold, BG=False, Ear
 
         print "Total Number of matched high pt jets:",HitClusters.shape[0]
 	print "saving file - do not abort computation now!" 
-	np.save("/afs/cern.ch/user/m/msommerh/CMSSW_9_4_0_patch1/src/bTag_nHits/HitAnalyzer/matched_clusters/MatchedClusters_{}.npy".format(title),HitClusters)
+	#np.save("/afs/cern.ch/user/m/msommerh/CMSSW_9_4_0_patch1/src/bTag_nHits/HitAnalyzer/matched_clusters/MatchedClusters_{}.npy".format(title),HitClusters)
 	print "Saved as matched_clusters/Matched_Clusters_{}.npy".format(title)
 	t2 = time.time()
 	print "total processing time: {}s".format(t2-t1)
@@ -890,6 +908,83 @@ def Efficient_Cluster_Matcher(title, file_path, MomentumThreshold, BG=False, Ear
 		writer.writerow([title,N,N])
 		csv_file.close()
 	
+def dR_Dist(title, file_paths, MomentumThreshold, BG=False, EarlyBreak=0):
+	dR = 0.2
+
+	histL1 = rt.TH1D('dR_L1', 'dR_L1', 40, 0, dR)
+        histL2 = rt.TH1D('dR_L2', 'dR_L2', 40, 0, dR)
+        histL3 = rt.TH1D('dR_L3', 'dR_L3', 40, 0, dR)
+        histL4 = rt.TH1D('dR_L4', 'dR_L4', 40, 0, dR)
+
+	for file_path in file_paths:
+		try:
+			print "working on file", file_path
+			file = rt.TFile.Open(file_path)
+        		# open tree file
+        		tree = file.Get("demo/tree")
+        		N = tree.GetEntries()
+			print "There are",N,"events in this file."
+			if EarlyBreak != 0:
+				N = EarlyBreak
+
+			for i in xrange(N):
+        		        if i % 100 == 0: print "Working on event " ,i
+        		        tree.GetEntry(i)
+        		        for j in range(0,tree.nJets):
+        		                jVector = rt.TLorentzVector()
+        		                jVector.SetPtEtaPhiM(tree.jet_pt[j],tree.jet_eta[j],tree.jet_phi[j],tree.jet_mass[j])
+					previous_ids = []
+        		                for k in range(0,tree.nGenParticles):
+						if BG:
+        		                        	pdgCriterion = abs(tree.genParticle_pdgId[k]) != 5
+        		                        	statusCriterion = tree.genParticle_status[k]== 23
+        		                        else:
+        		                                pdgCriterion = (abs(tree.genParticle_pdgId[k]) > 500 and abs(tree.genParticle_pdgId[k]) < 600) or (abs(tree.genParticle_pdgId[k]) > 5000 and abs(tree.genParticle_pdgId[k]) < 6000) 
+        		                                statusCriterion = tree.genParticle_status[k] == 2
+        		                        if statusCriterion and pdgCriterion:
+        		                                pVector = rt.TLorentzVector()
+        		                                pVector.SetPtEtaPhiM(tree.genParticle_pt[k],tree.genParticle_eta[k], \
+        		                                        tree.genParticle_phi[k],tree.genParticle_mass[k])
+        		                                delR = jVector.DeltaR(pVector)
+        		                                if delR < 0.3 and tree.genParticle_pt[k] > MomentumThreshold: #momentum threshold
+								v_p = normalize(np.array([jVector[0], jVector[1], jVector[2]]))
+        		                                        phi = PolarPhi(v_p[0],v_p[1])
+        		                                        theta = Theta(v_p[0],v_p[1],v_p[2])
+									
+								escape = False          #filter out identical daughters
+        		                                        if len(previous_ids)>0:
+        		                                                for prid in previous_ids:
+        		                                                        if (abs(abs(prid[0])-abs(tree.genParticle_pdgId[k])) == 2 and abs(prid[0])>100): 
+											escape=True
+        		                                        if escape: continue
+								
+        		                                        previous_ids.append((tree.genParticle_pdgId[k],delR))
+
+								JetFeatures = np.array([i,tree.jet_bTag[j],tree.genParticle_pt[k],tree.jet_pt[j],np.sqrt(tree.genParticle_decayvx_x[k]**2+tree.genParticle_decayvx_y[k]**2)])
+
+								for nModule,lenModule in enumerate(tree.nClusters): #finding all clusters inside deltaR<dR
+        		                                                for nCluster in xrange(0,lenModule):
+										ClusterTheta,ClusterPhi = ShiftedThetaPhi(tree.cluster_globalx[nModule][nCluster],tree.cluster_globaly[nModule][nCluster],tree.cluster_globalz[nModule][nCluster],tree.PV_x[0],tree.PV_y[0],tree.PV_z[0])
+                	                       		                        DR = DeltaR(theta,ClusterTheta,phi,ClusterPhi)
+										Layer = tree.detUnit_layer[nModule]
+										if DR<dR and Layer!=0:
+											if Layer == 1:
+												histL1.Fill(DR)
+											if Layer == 2:
+												histL2.Fill(DR)
+											if Layer == 3:
+												histL3.Fill(DR)
+											if Layer == 4:
+												histL4.Fill(DR)
+		except:
+			print "skipped the following file because of an error:"
+			print file_path
+			
+	tfile = rt.TFile("Thesis_Plots/root_files/dR_dist_"+title+".root","recreate")
+	histL1.Write()
+	histL2.Write()
+	histL3.Write()
+	histL4.Write()
 
 def Merge_PU(title):
 	Matched_Clusters = np.load("matched_clusters/MatchedClusters_{}.npy".format(title))
@@ -1203,20 +1298,20 @@ if __name__ == '__main__':
 	
 	Efficient_Cluster_Matcher(jobtitle, infile, MomentumThreshold, BG=True, EarlyBreak=0, Continue=False,Protocol=False)
 	'''
-	'''
+	
 	#select file paths	
 
 	SignalFile1 = "/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/ZprimeBBbar_M2000_GENSIMDIGIRECO_v2.root"
-	#SignalFile2 = "/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/ZprimeBBbar_M4000_GENSIMDIGIRECO_v2.root"
+	SignalFile2 = "/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/ZprimeBBbar_M4000_GENSIMDIGIRECO_v2.root"
 
 	Additional_Background_String = 'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/btagHits_wPVs/180502_130824/0000/flatTuple_{}.root'
-	'''
+	
 	#PU_Background_String = 'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to7000_TuneCUETP8M1_Flat_13TeV_pythia8_wPU-v2/180528_101050/0000/flatTuple_{}.root'	
 
 	
 	#pre-process data
 
-	#Efficient_Cluster_Matcher("4TeV-Signal", SignalFile2, MomentumThreshold, BG=False, EarlyBreak=0, Continue=True)
+	#Efficient_Cluster_Matcher("4TeV-Signal", SignalFile2, MomentumThreshold, BG=False, EarlyBreak=0, Continue=False)
 	#Efficient_Cluster_Matcher("Background", Background, MomentumThreshold, BG=True, EarlyBreak=0, Continue=True,Protocol=True)
 	#Efficient_Cluster_Matcher("2TeV-Signal", SignalFile1, 350, BG=False, EarlyBreak=0, Continue=False, Protocol=False)
 
@@ -1461,22 +1556,24 @@ if __name__ == '__main__':
 	'''
 
 	#study on pT-dependent cut (binned)
-	'''
-	Signal_4TeV_noPU = np.load('matched_clusters/Signal_noPU/MatchedClusters_4TeV-Signal.npy')
-	Signal_2TeV_noPU = np.load('matched_clusters/Signal_noPU/MatchedClusters_2TeV-Signal.npy')
-	Signal_both_noPU = np.vstack((Signal_4TeV_noPU,Signal_2TeV_noPU))
-	Background_noPU = load_data('BG','matched_clusters/BG_noPU/',31, old_version=True)
+	
+	#Signal_4TeV_noPU = np.load('matched_clusters/Signal_noPU/MatchedClusters_4TeV-Signal.npy')
+	#Signal_2TeV_noPU = np.load('matched_clusters/Signal_noPU/MatchedClusters_2TeV-Signal.npy')
+	#Signal_both_noPU = np.vstack((Signal_4TeV_noPU,Signal_2TeV_noPU))
+	#Background_noPU = load_data('BG','matched_clusters/BG_noPU/',31, old_version=True)
 	Signal_4TeV_PU = load_data('4TeV-Signal_PU','matched_clusters/Signal_PU/',15)
 	Signal_2TeV_PU = load_data('2TeV-Signal_PU','matched_clusters/Signal_PU/',19)
 	Signal_both_PU = np.vstack((Signal_4TeV_PU,Signal_2TeV_PU))
 	Background_PU = load_data('BG_PU','matched_clusters/BG_PU/',499)
-	'''
+	
 	#bins = [0, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250, 2500, 3000] #used for the pT-depending cuts
 	#bins = [0, 500, 750, 1000, 1250, 1500, 1750, 2000, 3000] #used for discriminant distributions
 	#coarse_bins = [400,600,1200,3000]
 	#coarse_bins = [400,600,1200,1800,3000]
 	#coarse_bins = [200,1200,3000]
-	coarse_bins = [0,1400,1600,1800,3000]
+	coarse_bins = [0,1200,1400,1600,1800,3000]
+	#single_bin = [0,4000]
+	#two_bins = [0,1200,4000]
 
 	bins2 = [350.0, 387.5, 425.0, 462.5, 500.0, 537.5, 575.0, 612.5, 650.0, 687.5, 725.0, 762.5, 800.0, 837.5, 875.0, 912.5, 950.0, 987.5, 1025.0, 1100.0, 1200.0, 1400.0, 1600.0, 1800.0, 2100.0, 2500.0, 3000.0] #used for better looking efficiency vs pT plots
 	PU_bins = [0.0, 5.0, 7.0, 9.0, 11.0]+range(11,41)+[42.0, 44.0, 46.0, 49.0, 52.0, 55.0, 58.0, 65.0, 80]
@@ -1508,19 +1605,24 @@ if __name__ == '__main__':
 	'''
 	
 	#make binned ROC curves for all cases
-	'''
-	efficient_Make_Binned_ROC_histograms('4TeV-Signal_noPU', Signal_4TeV_noPU, coarse_bins)	
-	efficient_Make_Binned_ROC_histograms('both-Signal_noPU', Signal_both_noPU, coarse_bins)	
-	efficient_Make_Binned_ROC_histograms('4TeV-Signal_PU', Signal_4TeV_PU, coarse_bins)	
-	efficient_Make_Binned_ROC_histograms('both-Signal_PU', Signal_both_PU, coarse_bins)	
 	
-	efficient_Make_Binned_ROC_histograms('BG_noPU', Background_noPU, coarse_bins)	
-	efficient_Make_Binned_ROC_histograms('BG_PU', Background_PU, coarse_bins)	
-	'''
-	Make_Binned_ROC_Curves('4TeV_noPU','4TeV-Signal_noPU_binned','BG_noPU_binned',coarse_bins,log=True)
-	Make_Binned_ROC_Curves('both_Signals_noPU','both-Signal_noPU_binned','BG_noPU_binned',coarse_bins,log=True)
-	Make_Binned_ROC_Curves('4TeV_PU','4TeV-Signal_PU_binned','BG_PU_binned',coarse_bins,log=True)
-	Make_Binned_ROC_Curves('both_Signals_PU','both-Signal_PU_binned','BG_PU_binned',coarse_bins,log=True)
+	#efficient_Make_Binned_ROC_histograms('4TeV-Signal_noPU', Signal_4TeV_noPU, coarse_bins)	
+	#efficient_Make_Binned_ROC_histograms('both-Signal_noPU', Signal_both_noPU, coarse_bins)	
+	#efficient_Make_Binned_ROC_histograms('4TeV-Signal_PU_15-25', Signal_4TeV_PU, coarse_bins, PU_range=(15,25)	
+	efficient_Make_Binned_ROC_histograms('both-Signal_PU_15-25', Signal_both_PU, coarse_bins, PU_range=(15,25))
+	
+	#efficient_Make_Binned_ROC_histograms('BG_noPU', Background_noPU, coarse_bins)	
+	efficient_Make_Binned_ROC_histograms('BG_PU_15-25', Background_PU, coarse_bins, PU_range=(15,25))	
+
+	#Make_Binned_ROC_Curves('4TeV-Signal_noPU','4TeV-Signal_noPU_binned','BG_noPU_binned',coarse_bins,log=False)
+	#Make_Binned_ROC_Curves('both-Signals_noPU','both-Signal_noPU_binned','BG_noPU_binned',coarse_bins,log=False)
+	#Make_Binned_ROC_Curves('4TeV-Signal_PU','4TeV-Signal_PU_binned','BG_PU_binned',coarse_bins,log=False)
+	#Make_Binned_ROC_Curves('both-Signals_PU','both-Signal_PU_binned','BG_PU_binned',coarse_bins,log=False)
+
+	#Make_Binned_ROC_Curves('4TeV-Signal_noPU_log','4TeV-Signal_noPU_binned','BG_noPU_binned',coarse_bins,log=True)
+	#Make_Binned_ROC_Curves('both-Signals_noPU_log','both-Signal_noPU_binned','BG_noPU_binned',coarse_bins,log=True)
+	#Make_Binned_ROC_Curves('4TeV-Signal_PU_15-25_log','4TeV-Signal_PU_15-25_binned','BG_PU_15-25_binned',coarse_bins,log=True)
+	Make_Binned_ROC_Curves('both-Signals_PU_15-25_log','both-Signal_PU_15-25_binned','BG_PU_15-25_binned',coarse_bins,log=True)
 
 	#no PU	
 	'''

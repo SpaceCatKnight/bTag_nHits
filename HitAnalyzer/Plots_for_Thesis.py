@@ -719,7 +719,7 @@ def binned_efficiency_vs_PU(title, data, Delta_Cuts, Ratio_Cuts, CSV_Cuts, bins,
         canvas.SaveAs('Thesis_Plots/'+title+"_vs_PU_pT{}{}.png".format(pT_Mode,pT_Cut))
 
 def QuarkHadronComparison(file_paths, title, dR, MomentumThreshold, BG=False, EarlyBreak=0):
-      
+	"""Makes a histogram of the fractional difference of pT, eta and phi between hadrons and quarks in the sample given. """      
 	PT_DIFF = rt.TH1D("pt_diff","pt_diff",40,0,1)
        	ETA_DIFF = rt.TH1D("eta_diff","eta_diff",40,0,1)
        	PHI_DIFF = rt.TH1D("phi_diff","phi_diff",40,0,1)
@@ -758,12 +758,6 @@ def QuarkHadronComparison(file_paths, title, dR, MomentumThreshold, BG=False, Ea
 	PT_DIFF.Write()
         ETA_DIFF.Write()
         PHI_DIFF.Write()
-	''' 
-        Histogramize([(PT_DIFF,"pT_diff_"+title)], (0,700), "pt_diff"+title, "pt_diff", "# particles", Save=save,Normalize=False, t_sleep=5)
-        Histogramize([(ETA_DIFF,"eta_diff_"+title)], (0,0.2), "eta_diff"+title, "eta_diff", "# particles", Save=save,Normalize=False, t_sleep=5)
-        Histogramize([(PHI_DIFF,"phi_diff"+title)], (0,0.2), "phi_diff"+title, "phi_diff", "# particles", Save=save,Normalize=False, t_sleep=5)
-        #return (pt_diff,eta_diff,phi_diff)
-	'''
 
 def exclusive_tagged_jets_hist(signal_title, data, discriminant, discriminant_cut, CSV_cut,ran, nbins, Difference=False, mode="pT_jet",y_max=0,Save=False):
         """creates three histograms when given a signal dataset: -all jets tagged by CSV but not by the discriminant (L4-L1 for Difference = True, L4/L1 for Difference = False inside given dR), -all jets tagged
@@ -1162,6 +1156,7 @@ def Make_Binned_ANN_ROC_Curves(title,Signal_title,Background_title,bins,log=Fals
         print "saved as Thesis_Plots/{}_ROC_Curves.png".format(title)
 
 def ANN_efficiency_vs_PU(title, x_data, pT, CSV, model, ANN_Cuts, Ratio_Cuts, CSV_Cuts, bins, y_max, pT_Cut=200, BG=False):
+	"""draws the efficiency vs number of PV for ANN, L4/L1 and CSV when given the ANN data and the cuts corresponding to each discriminant"""
         assert x_data.shape[1]==21, "x_data does not contain PV. Make sure it is made from a PU sample and has shape (x, 21)."
 	assert x_data.shape[0] == len(pT) == len(CSV), "data inputs need to have the same length"
 	assert len(ANN_Cuts) == len(Ratio_Cuts) == len(CSV_Cuts) == len(bins)-1, "cuts need to have the same length and be compatible with amount of bins"
@@ -1173,6 +1168,10 @@ def ANN_efficiency_vs_PU(title, x_data, pT, CSV, model, ANN_Cuts, Ratio_Cuts, CS
 		bins_ = array.array('d',[0.0, 11.0]+range(13,41,2)+[42.0, 46.0, 52.0, 80])
 	else:
         	bins_ = array.array('d',[0.0, 11.0]+range(13,41,2)+[42.0, 46.0, 52.0, 58.0, 65.0, 80])
+
+	if pT_Cut >= 1200:
+		bins_ = array.array('d',[0.0, 20.0, 40.0, 80.0])
+
 
         #make histograms of efficiency vs PU
         AllJets_Hist = rt.TH1D("AllJets","AllJets",nbins,ran[0],ran[1])
@@ -1235,10 +1234,14 @@ def ANN_efficiency_vs_PU(title, x_data, pT, CSV, model, ANN_Cuts, Ratio_Cuts, CS
         canvas.SaveAs('Thesis_Plots/'+title+"_vs_PU_pT{}{}.png".format('jet',pT_Cut))
 
 
-def DrawHistograms(Histograms, ran, title, xlabel, ylabel, Save=False,Normalize=True, t_sleep=0):
+def DrawHistograms(Histograms, ran, title, xlabel, ylabel, Save=False,Normalize=True,DrawTitle=False, t_sleep=0):
         """Draws multiple histograms neatly on a canvas when given to the function as list of tuples (root histogram, title)."""
         canvas = rt.TCanvas('canvas','canvas',600,600)
-        canvas.SetTitle(title)
+	if DrawTitle: 
+		canvas.SetTitle(title)
+	else:
+		rt.gStyle.SetOptTitle(0)
+	
 	histlist = []
         if len(Histograms) > 1:
                 rt.gStyle.SetOptStat(0)#something is wrong with this
@@ -1250,7 +1253,7 @@ def DrawHistograms(Histograms, ran, title, xlabel, ylabel, Save=False,Normalize=
 		else:
 			histlist[nr].SetLineColor(nr+3)
                 if nr == 0:
-			histlist[nr].SetTitle(title)
+			if DrawTitle: histlist[nr].SetTitle(title)
                         histlist[nr].GetXaxis().SetTitle(xlabel)
                         histlist[nr].GetYaxis().SetTitle(ylabel)
                         histlist[nr].GetYaxis().SetTitleOffset(1.5)
@@ -1704,6 +1707,7 @@ if __name__ == '__main__':
 	pT = np.load("Submitted_Models/data/noPU_both_withPT/test_feature.npy")
 	print "data loaded"
 	'''
+	
 	#withPU both
 	model = kr.models.load_model("Submitted_Models/model_withPU_both.h5")
         model_type = "functional"
@@ -1714,7 +1718,7 @@ if __name__ == '__main__':
 	labels = np.load("Submitted_Models/data/withPU_both_withPT/test_y.npy")
 	pT = np.load("Submitted_Models/data/withPU_both_withPT/test_feature.npy")
 	print "data loaded"
-
+		
 	'''	
 	pred_y = model.predict(ANN_functional_shape(x_data))
 	fpr, tpr, thr = roc_curve(np.array(labels),pred_y)
@@ -1725,13 +1729,14 @@ if __name__ == '__main__':
 	plt.legend(loc=3)
 	plt.show()
 	'''
-
+	'''
 	signal_x_data = x_data[labels==1]
 	signal_pT = pT[labels==1]
 	signal_CSV = CSV[labels==1]
 	bg_x_data = x_data[labels==0]
 	bg_pT = pT[labels==0]
 	bg_CSV = CSV[labels==0]
+	'''
 	'''
 	#ANN_Make_Binned_ROC_histograms("Signal_ANN",model, signal_x_data, signal_pT, signal_CSV, cut_bins)
 	#ANN_Make_Binned_ROC_histograms("BG_ANN",model, bg_x_data, bg_pT, bg_CSV, cut_bins)
@@ -1781,14 +1786,14 @@ if __name__ == '__main__':
         binned_ratio_thist = 		FCM.RebinHist(compare_tagged_ratio_file.Get('Signal_compare_Discriminant'),"L4/L1",plot_bins)	#compare_tagged_ratio_file.Get('Signal_compare_Discriminant')	
         binned_bg_ratio_thist = 	FCM.RebinHist(compare_bg_tagged_ratio_file.Get('BG_compare_Discriminant'),"L4/L1",plot_bins)   #compare_bg_tagged_ratio_file.Get('BG_compare_Discriminant')	
 
-	#Efficiency_vs_pT("Signal_ANN_vs_L4_L1",[(binned_ANN_thist,"ANN"),(binned_ratio_thist,"L4/L1"),(binned_CSV_thist,"CSV")], binned_AllJets_thist, 0.6, Save=True,legend_shift=True)
-        #Efficiency_vs_pT("Background_ANN_vs_L4_L1",[(binned_bg_ANN_thist,"ANN"),(binned_bg_ratio_thist,"L4/L1"),(binned_bg_CSV_thist,"CSV")], binned_bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True)
+	Efficiency_vs_pT("Signal_ANN_vs_L4_L1",[(binned_ANN_thist,"ANN"),(binned_ratio_thist,"L4/L1"),(binned_CSV_thist,"CSV")], binned_AllJets_thist, 0.7, Save=True,legend_shift=True)
+        Efficiency_vs_pT("Background_ANN_vs_L4_L1",[(binned_bg_ANN_thist,"ANN"),(binned_bg_ratio_thist,"L4/L1"),(binned_bg_CSV_thist,"CSV")], binned_bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True)
 
 	#DrawHistograms([(binned_AllJets_thist,"all jets"), (binned_ANN_thist, "ANN"),(binned_ratio_thist, "L4/L1"),(binned_CSV_thist,"CSV")], (0,2500), "ANN_vs_L4_L1_tagged_jets_vs_pT_binned", 'jet-pT', "# jets", Save=True,Normalize=False)
 	'''
 
 
-
+	
 	#PU study of ANNs
 
 	#ANN_Make_Binned_ROC_histograms("Signal_ANN_PU",model, signal_x_data, signal_pT, signal_CSV, cut_bins)
@@ -1823,24 +1828,40 @@ if __name__ == '__main__':
 
 	#DrawHistograms([(binned_AllJets_thist,"all jets"), (binned_ANN_thist, "ANN"),(binned_ratio_thist, "L4/L1"),(binned_CSV_thist,"CSV")], (0,2500), "ANN_vs_L4_L1_PU_tagged_jets_vs_pT_binned", 'jet-pT', "# jets", Save=True,Normalize=False)	
 	
-	#Efficiency_vs_pT("Signal_PU_ANN_vs_L4_L1",[(binned_ANN_thist,"ANN"),(binned_ratio_thist,"L4/L1"),(binned_CSV_thist,"CSV")], binned_AllJets_thist, 0.8, Save=True,legend_shift=True)
+	#Efficiency_vs_pT("Signal_PU_ANN_vs_L4_L1",[(binned_ANN_thist,"ANN"),(binned_ratio_thist,"L4/L1"),(binned_CSV_thist,"CSV")], binned_AllJets_thist, 0.7, Save=True,legend_shift=True)
         #Efficiency_vs_pT("Background_PU_ANN_vs_L4_L1",[(binned_bg_ANN_thist,"ANN"),(binned_bg_ratio_thist,"L4/L1"),(binned_bg_CSV_thist,"CSV")], binned_bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True)
 
 
-	ANN_efficiency_vs_PU("ANN_vs_L4_L1", signal_x_data, signal_pT, signal_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.8, pT_Cut=200, BG=False)
-	ANN_efficiency_vs_PU("ANN_vs_L4_L1_BG", bg_x_data, bg_pT, bg_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.3, pT_Cut=200, BG=True)
+	#ANN_efficiency_vs_PU("ANN_vs_L4_L1", signal_x_data, signal_pT, signal_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.7, pT_Cut=200, BG=False)
+	#ANN_efficiency_vs_PU("ANN_vs_L4_L1_BG", bg_x_data, bg_pT, bg_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.3, pT_Cut=200, BG=True)
 
-	ANN_efficiency_vs_PU("ANN_vs_L4_L1", signal_x_data, signal_pT, signal_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.8, pT_Cut=1200, BG=False)
-	ANN_efficiency_vs_PU("ANN_vs_L4_L1_BG", bg_x_data, bg_pT, bg_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.3, pT_Cut=1200, BG=True)
+	#ANN_efficiency_vs_PU("ANN_vs_L4_L1", signal_x_data, signal_pT, signal_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.7, pT_Cut=1200, BG=False)
+	#ANN_efficiency_vs_PU("ANN_vs_L4_L1_BG", bg_x_data, bg_pT, bg_CSV, model, ANN_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.3, pT_Cut=1200, BG=True)
+	
+
+
 	
 	#for appendix: correlation plots between decayvx and pT. also jet-pT vs hadron-pT
 		
 		
 	#also for appendix: differece between hadron and quark
-	'''
-	QuarkHadronComparison(Signal_2TeV_noPU_String_list, "2TeV", 0.1, 350, BG=False, EarlyBreak=0)
-        QuarkHadronComparison(Signal_4TeV_noPU_String_list, "4TeV", 0.1, 350, BG=False, EarlyBreak=0)
-	'''
 
+	#QuarkHadronComparison(Signal_2TeV_noPU_String_list, "2TeV", 0.1, 350, BG=False, EarlyBreak=0)
+        #QuarkHadronComparison(Signal_4TeV_noPU_String_list, "4TeV", 0.1, 350, BG=False, EarlyBreak=0)
+	'''
+	quark_file_2TeV = rt.TFile.Open('Thesis_Plots/root_files/QuarkvsHadron_2TeV.root')
+	pT_2TeV_hist = quark_file_2TeV.Get("pt_diff"); eta_2TeV_hist = quark_file_2TeV.Get("eta_diff"); phi_2TeV_hist = quark_file_2TeV.Get("phi_diff")
+	quark_file_4TeV = rt.TFile.Open('Thesis_Plots/root_files/QuarkvsHadron_4TeV.root')
+	pT_4TeV_hist = quark_file_4TeV.Get("pt_diff"); eta_4TeV_hist = quark_file_4TeV.Get("eta_diff"); phi_4TeV_hist = quark_file_4TeV.Get("phi_diff")	
+	
+	DrawHistograms([(pT_2TeV_hist,"2TeV"), (pT_4TeV_hist,"4TeV")], (0,1), "Quark_vs_Hadron_pT", '#Deltap_{T}/p_{T quark}', "(a.u.)", Save=True,Normalize=True,DrawTitle=False)
+	DrawHistograms([(eta_2TeV_hist,"2TeV"), (eta_4TeV_hist,"4TeV")], (0,1), "Quark_vs_Hadron_eta", '#Delta#eta/#eta_{quark}', "(a.u.)", Save=True,Normalize=True,DrawTitle=False)
+	DrawHistograms([(phi_2TeV_hist,"2TeV"), (phi_4TeV_hist,"4TeV")], (0,1), "Quark_vs_Hadron_phi", '#Delta#phi/#phi_{quark}', "(a.u.)", Save=True,Normalize=True,DrawTitle=False)
+	'''
+	'''
+	FCM.dR_Dist('2TeV',Signal_2TeV_noPU_String_list, 350, BG=False, EarlyBreak=0)
+	FCM.dR_Dist('4TeV',Signal_4TeV_noPU_String_list, 350, BG=False, EarlyBreak=0)
+	FCM.dR_Dist('BG',BG_noPU_String_list, 350, BG=False, EarlyBreak=0)
+	'''
 
 
