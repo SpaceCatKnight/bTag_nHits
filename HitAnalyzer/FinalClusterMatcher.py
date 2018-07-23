@@ -286,6 +286,40 @@ def Efficient_SeparateLayerHist(datalist, ran, dR,minPT=0,jet_pT=True, Save=Fals
                 	Hist_list[2][n].Fill(particle[dR_tag+2])
                 	Hist_list[3][n].Fill(particle[dR_tag+3])
 
+	
+	for l,layer in enumerate(Hist_list):
+                canvas.cd(l+1)
+                for n,Hist in enumerate(layer):
+                        Hist.GetXaxis().SetTitle("# clusters")
+                        Hist.GetYaxis().SetTitle('(a.u.)')
+                        Hist.GetYaxis().SetTitleOffset(1.5)
+			#Hist.Scale(1/(Hist.Integral()))
+			#Hist.SetLineStyle(0)
+			#Hist.SetMaximum(0.12)
+			#Hist.SetMinimum(0)
+			if n == 0:
+				Hist.SetLineColor(3)
+			elif n== 1:
+				Hist.SetLineColor(4)
+			elif n== 2:
+				Hist.SetLineColor(2)
+			else:
+                        	Hist.SetLineColor(n+2)
+				print "might rewrite function for this amount of data inputs"
+		
+	legend = rt.TLegend(0.999,0.999,0.65,0.75)
+	legend.AddEntry(Hist_list[0][2],'background')
+	legend.AddEntry(Hist_list[0][0],'2TeV signal')
+	legend.AddEntry(Hist_list[0][1],'4TeV signal')
+	for l,layer in enumerate(Hist_list):
+                canvas.cd(l+1)
+		for n,Hist in enumerate(layer):
+                        if n==0:
+                                Hist.DrawNormalized()
+                        else:
+                                Hist.DrawNormalized("SAME")
+                	if l==1: legend.Draw()
+	'''
         for l,layer in enumerate(Hist_list):
                 canvas.cd(l+1)
                 if l==1: legend = rt.TLegend(0.999,0.999,0.65,0.75)
@@ -297,13 +331,22 @@ def Efficient_SeparateLayerHist(datalist, ran, dR,minPT=0,jet_pT=True, Save=Fals
 			#Hist.SetLineStyle(0)
 			#Hist.SetMaximum(0.12)
 			#Hist.SetMinimum(0)
-                        Hist.SetLineColor(n+2)
+			if n == 0:
+				Hist.SetLineColor(3)
+			elif n== 1:
+				Hist.SetLineColor(4)
+			elif n== 2:
+				Hist.SetLineColor(2)
+			else:
+                        	Hist.SetLineColor(n+2)
+				print "might rewrite function for this amount of data inputs"
                         if l==1: legend.AddEntry(Hist,datalist[n][1])
                         if n==0:
                                 Hist.DrawNormalized()
                         else:
                                 Hist.DrawNormalized("SAME")
                 	if l==1: legend.Draw()
+	'''
         if Save: canvas.SaveAs("Thesis_Plots/SeparateLayerHist.png")
         #sleep(10)
 

@@ -361,8 +361,8 @@ def Plot_ROCs(title,tpr_no_pT, fpr_no_pT, tpr_with_pT, fpr_with_pT, tpr_with_PV,
 		plt.semilogy(tpr_with_PV,fpr_with_PV,'b',label='with_PV')
 	plt.semilogy(tpr_csv,fpr_csv,'k-',label='CSV')
 	plt.semilogy([0,1],[0.1,0.1],'k:',label='10% mistag')
-	plt.xlabel(r"$\epsilon$_signal")
-	plt.ylabel(r"$\epsilon$_background")
+	plt.xlabel(r"signal efficiency")
+	plt.ylabel(r"$mistag rate")
 	plt.title("ROC-Curves_"+title)
 	plt.legend(loc=4)
 	plt.savefig("Submitted_Models/"+folder+"ROCS_"+title+".png")
@@ -371,18 +371,20 @@ def Plot_ROCs(title,tpr_no_pT, fpr_no_pT, tpr_with_pT, fpr_with_pT, tpr_with_PV,
 def Plot_General_ROCs(title,datalist, x_min=0.1, x_max=0.8, y_min=0.005,folder="",DrawTitle=False):
 	"""datalist should be list of tuples: (tpr, fpr, label,color(optional))"""
 	c = ['r', 'g', 'b', 'brown', 'orange']
+	x_min, x_max = 0, 1
+	y_min, y_max = 10**(-3), 1
 	plt.figure("ROC_"+title)
 	plt.clf()
 	plt.xlim(xmin=x_min, xmax=x_max)
-	plt.ylim(ymin=y_min)
+	plt.ylim(ymin=y_min, ymax=y_max)
 	for n,entry in enumerate(datalist):
 		if len(entry)>3:
 			plt.semilogy(entry[0],entry[1],color=entry[3],label=entry[2])
 		else:
 			plt.semilogy(entry[0],entry[1],color=c[n],label=entry[2])
 	plt.semilogy([0,1],[0.1,0.1],'k:',label='10% mistag')
-	plt.xlabel(r"$\epsilon$_signal")
-	plt.ylabel(r"$\epsilon$_background")
+	plt.xlabel(r"signal efficiency")
+	plt.ylabel(r"mistag rate")
 	if DrawTitle: plt.title("ROC-Curves_"+title)
 	plt.legend(loc=4)
 	plt.savefig("Submitted_Models/"+folder+"ROCS_"+title+".png")
@@ -419,24 +421,41 @@ def Compare_GRID_ANNs_ROC1():
 	tpr3,fpr3 = np.loadtxt("Submitted_Models/efficiencies_twoCones.csv",delimiter=',')
 	tpr4,fpr4 = np.loadtxt("Submitted_Models/efficiencies_fiveCones.csv",delimiter=',')
 
-	Plot_General_ROCs('ANNROCs1',[(tpr1,fpr1,r'Li $\Delta R<0.04$'),(tpr2,fpr2,r'Li $\Delta R<0.1$'),(tpr3,fpr3,r'two cones'),(tpr4,fpr4,r'five cones'),(tpr_csv,fpr_csv,r'CSV','k')])
+	Plot_General_ROCs('ANNROCs1',[(tpr1,fpr1,r'ANN with Li($\Delta R<0.04$)', 'g'),(tpr2,fpr2,r'ANN with Li($\Delta R<0.1$)', 'r'),(tpr3,fpr3,r'ANN with two cones', 'orange'),(tpr4,fpr4,r'ANN with five cones', 'brown'),(tpr_csv,fpr_csv,r'CSV','b')])
 
 def Compare_GRID_ANNs_ROC2():
 	fpr_csv, tpr_csv, t_ = roc_curve(np.load('Submitted_Models/data/noPU_both/test_y.npy'),np.load('Submitted_Models/data/noPU_both/test_CSV.npy'))
 
 	tpr1,fpr1 = np.loadtxt("Submitted_Models/efficiencies_fiveCones.csv",delimiter=',')
 	tpr2,fpr2 = np.loadtxt("Submitted_Models/efficiencies_fiveConesConv.csv",delimiter=',')
-	tpr3,fpr3 = np.loadtxt("Submitted_Models/efficiencies_fiveConesFunc.csv",delimiter=',')
+	tpr3,fpr3 = np.loadtxt("Submitted_Models/efficiencies_noPU_functional.csv",delimiter=',')
 	tpr4,fpr4 = np.loadtxt("Submitted_Models/efficiencies_noPU_both.csv",delimiter=',')
 
-	Plot_General_ROCs('ANNROCs2',[(tpr1,fpr1,r'simple'),(tpr2,fpr2,r'conv one branch'),(tpr3,fpr3,r'conv two branches'),(tpr4,fpr4,r'conv three branches'),(tpr_csv,fpr_csv,r'CSV','k')])
+	Plot_General_ROCs('ANNROCs2',[(tpr1,fpr1,r'simple ANN','brown'),(tpr2,fpr2,r'one branch CNN','r'),(tpr3,fpr3,r'two branch CNN','g'),(tpr4,fpr4,r'three branch CNN','orange'),(tpr_csv,fpr_csv,r'CSV','b')])
 
-def Compare_single_dataset_ANNs_on_pT_range(data_title,feature_title, pT_min, pT_max):
+def Compare_GRID_ANNs_ROC3():
+	fpr_csv, tpr_csv, t_ = roc_curve(np.load('Submitted_Models/data/noPU_both/test_y.npy'),np.load('Submitted_Models/data/noPU_both/test_CSV.npy'))
+
+	tpr1,fpr1 = np.loadtxt("Submitted_Models/efficiencies_noPU_functional.csv",delimiter=',')
+	tpr2,fpr2 = np.loadtxt("Submitted_Models/efficiencies_noPU_functional_withPT.csv",delimiter=',')
+
+	Plot_General_ROCs('ANNROCs3',[(tpr1,fpr1,r'ANN without $p_T$','g'),(tpr2,fpr2,r'ANN with $p_T$','magenta'),(tpr_csv,fpr_csv,r'CSV','b')])
+
+def Compare_GRID_ANNs_ROC_PU1():
+	fpr_csv, tpr_csv, t_ = roc_curve(np.load('Submitted_Models/data/withPU_both/test_y.npy'),np.load('Submitted_Models/data/withPU_both/test_CSV.npy'))
+
+	tpr1,fpr1 = np.loadtxt("Submitted_Models/efficiencies_withPU_functional.csv",delimiter=',')
+	tpr2,fpr2 = np.loadtxt("Submitted_Models/efficiencies_withPU_functional_withPT.csv",delimiter=',')
+	tpr3,fpr3 = np.loadtxt("Submitted_Models/efficiencies_withPU_functional_withPV.csv",delimiter=',')
+
+	Plot_General_ROCs('ANNROCsPU1',[(tpr1,fpr1,r'ANN without $p_T$/PV','g'),(tpr2,fpr2,r'ANN with $p_T$','magenta'),(tpr3,fpr3,r'ANN with PV','cyan'),(tpr_csv,fpr_csv,r'CSV','b')])
+
+def Compare_single_dataset_ANNs_on_pT_range(model_title,data_title,feature_title, pT_min, pT_max):
 	if feature_title != '':
 		add = "_with"+feature_title
 	else:
 		add = ''
-	model = kr.models.load_model("Submitted_Models/model_"+data_title+add+".h5")
+	model = kr.models.load_model("Submitted_Models/model_"+model_title+".h5")
 	test_x = np.load('Submitted_Models/data/'+data_title+'/test_x.npy')
 	test_y = np.load('Submitted_Models/data/'+data_title+'/test_y.npy')
 	test_CSV = np.load('Submitted_Models/data/'+data_title+'/test_CSV.npy')
@@ -466,38 +485,32 @@ def Compare_GRID_ANNs_on_pT_range(pT_min,pT_max):
 
 	folder = "pT_bins/"
 	
-	fpr1, tpr1, fpr1_csv, tpr1_csv = Compare_single_dataset_ANNs_on_pT_range("noPU_both",'', pT_min, pT_max)
-	fpr2, tpr2, fpr1_csv, tpr1_csv = Compare_single_dataset_ANNs_on_pT_range("noPU_both",'PT', pT_min, pT_max)
-	fpr3, tpr3, fpr3_csv, tpr3_csv = Compare_single_dataset_ANNs_on_pT_range("noPU_4TeV",'', pT_min, pT_max)
-	fpr4, tpr4, fpr3_csv, tpr3_csv = Compare_single_dataset_ANNs_on_pT_range("noPU_4TeV",'PT', pT_min, pT_max)
-	fpr5, tpr5, fpr5_csv, tpr5_csv = Compare_single_dataset_ANNs_on_pT_range("withPU_both",'', pT_min, pT_max)
-	fpr6, tpr6, fpr5_csv, tpr5_csv = Compare_single_dataset_ANNs_on_pT_range("withPU_both",'PT', pT_min, pT_max)
-	fpr7, tpr7, fpr5_csv, tpr5_csv = Compare_single_dataset_ANNs_on_pT_range("withPU_both",'PV', pT_min, pT_max)
-	fpr8, tpr8, fpr8_csv, tpr8_csv = Compare_single_dataset_ANNs_on_pT_range("withPU_4TeV",'', pT_min, pT_max)
-	fpr9, tpr9, fpr8_csv, tpr8_csv = Compare_single_dataset_ANNs_on_pT_range("withPU_4TeV",'PT', pT_min, pT_max)
-	fpr10, tpr10, fpr8_csv, tpr8_csv = Compare_single_dataset_ANNs_on_pT_range("withPU_4TeV",'PV', pT_min, pT_max)
+	fpr1, tpr1, fpr1_csv, tpr1_csv = Compare_single_dataset_ANNs_on_pT_range("noPU_functional","noPU_both",'', pT_min, pT_max)
+	fpr2, tpr2, fpr1_csv, tpr1_csv = Compare_single_dataset_ANNs_on_pT_range("noPU_functional_withPT","noPU_both",'PT', pT_min, pT_max)
+	fpr3, tpr3, fpr3_csv, tpr3_csv = Compare_single_dataset_ANNs_on_pT_range("withPU_functional","withPU_both",'', pT_min, pT_max)
+	fpr4, tpr4, fpr3_csv, tpr3_csv = Compare_single_dataset_ANNs_on_pT_range("withPU_functional_withPT","withPU_both",'PT', pT_min, pT_max)
+	fpr5, tpr5, fpr3_csv, tpr3_csv = Compare_single_dataset_ANNs_on_pT_range("withPU_functional_withPV","withPU_both",'PV', pT_min, pT_max)
 
 	add = "_pT_{}_{}".format(pT_min,pT_max)
 
-	Plot_ROCs("noPU_both"+add, tpr1, fpr1, tpr2, fpr2, None, None, tpr1_csv, fpr1_csv,folder=folder)
-	#Plot_ROCs("noPU_4TeV"+add, tpr3, fpr3, tpr4, fpr4, None, None, tpr3_csv, fpr3_csv,folder=folder)
-	Plot_ROCs("PU_both"+add, tpr5, fpr5, tpr6, fpr6, tpr7, fpr7, tpr5_csv, fpr5_csv,folder=folder)
-	#Plot_ROCs("PU_4TeV"+add, tpr8, fpr8, tpr9, fpr9, tpr10, fpr10, tpr8_csv, fpr8_csv,folder=folder)
+	Plot_General_ROCs('ANNROCs3'+add,[(tpr1,fpr1,r'ANN without $p_T$','g'),(tpr2,fpr2,r'ANN with $p_T$','magenta'),(tpr1_csv,fpr1_csv,r'CSV','b')])
+	Plot_General_ROCs('ANNROCsPU1'+add,[(tpr3,fpr3,r'ANN without $p_T$/PV','g'),(tpr4,fpr4,r'ANN with $p_T$','magenta'),(tpr5,fpr5,r'ANN with PV','cyan'),(tpr3_csv,fpr3_csv,r'CSV','b')])
 
 
 if __name__ == "__main__":
 
 	#Compare_GRID_ANNs()
-	#pT_bins = [0,1200,1800,2500]
+	pT_bins = [0,1200,3000]
 	
-	'''
-	pT_bins = [0,1200,2500]
+	#Compare_GRID_ANNs_ROC1()
+	#Compare_GRID_ANNs_ROC2()	
+	#Compare_GRID_ANNs_ROC3()
+	#Compare_GRID_ANNs_ROC_PU1()	
 
 	for n in range(len(pT_bins)-1):
 		Compare_GRID_ANNs_on_pT_range(pT_bins[n],pT_bins[n+1])
-	'''
-	Compare_GRID_ANNs_ROC1()
-	Compare_GRID_ANNs_ROC2()	
+
+
 	
 	#initialize model
 	

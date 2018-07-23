@@ -103,14 +103,14 @@ def submitJobs(cmd,queue,global_jobname):
 '''
 #pT and PV with functional model on both samples with and without PU
 job_dict = {0:'noPU_functional', 1:'noPU_functional_withPT', 2:'withPU_functional', 3:'withPU_functional_withPT', 4:'withPU_functional_withPV'}
-Epoch_dict = {0:250, 1:300, 2:300, 3:300, 4:300}
+Epoch_dict = {0:260, 1:270, 2:280, 3:290, 4:270}
 pathstring = "Submitted_Models/data/"
 
 def submitJobs(cmd,queue,global_jobname):
     path = os.getcwd()
     joblist = []
     for i in range(0,5):
-	if i == 0 or i==2: continue
+	#if i == 0 or i==2: continue
 	
 	local_jobname = job_dict[i]
 	nEpochs = Epoch_dict[i]

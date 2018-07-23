@@ -86,12 +86,13 @@ def Initialize3DPlot(title, xlabel, ylabel, zlabel, grid=None):
                 ax.scatter(grid[0],grid[1],grid[2],c='k',s=1,linewidths=0.1)
         return ax
 
-def MakeGrid(file):
+def MakeGrid(file, EarlyBreak=0):
 	tree = file.Get("demo/tree")
 	N = tree.GetEntries()
 	DetUnits = []
 	for i in xrange(N):
     		if i % 50 == 0: print "Working on event " ,i
+		if EarlyBreak > 0 and i >= EarlyBreak: break
     		tree.GetEntry(i)
 		for DetUnit in zip(tree.detUnit_X,tree.detUnit_Y,tree.detUnit_Z):
 			if DetUnit not in DetUnits:
@@ -137,12 +138,57 @@ def PlotTrajectory2D(vx,p,ax,T_max,res,col,lwidth,lstyle):
                 Tx.append(vx[0]+t*v_t[0])
                 Ty.append(vx[1]+t*v_t[1])
                 Tz.append(vx[2]+t*v_t[2])
-        ax.plot(xs=Tx,ys=Ty,color=col,linewidth=lwidth,linestyle=lstyle)#plots all the tracks
+        ax.plot(Tx,Ty,color=col,linewidth=lwidth,linestyle=lstyle)#plots all the tracks
 
+def f_i(ParticleData):
+	N = np.zeros(5)
+	f1, f2, f3 = 0,0,0
+	for cluster in ParticleData:
+		layer = cluster[0][2]
+		N[layer] += 1
+	if N[1] != 0: 
+		f1 = (N[2]-N[1])/N[1]
+	if N[2] != 0: 
+		f2 = (N[3]-N[2])/N[2]
+	if N[3] != 0: 
+		f3 = (N[4]-N[3])/N[3]
+	return (f1,f2,f3)		
 
+def DHistf(HitClusters):
+	DHistf1 = rt.TH1D('f_i distribution', 'f_i distribution', 40, -1, 5)	
+	DHistf2 = rt.TH1D('f_i distribution','f_i distribution' , 40, -1, 5)	
+	DHistf3 = rt.TH1D('f_i distribution','f_i distribution' , 40, -1, 5)	
+	
+	for k, ParticleData in enumerate(HitClusters):
+		(f1,f2,f3) = f_i(ParticleData)
+		DHistf1.Fill(f1)
+		DHistf2.Fill(f2)
+		DHistf3.Fill(f3)
+
+	c3 = rt.TCanvas('c3','c3',600,600)
+	c3.SetTitle('f_i distribution')
+	rt.gStyle.SetOptStat(0)
+	DHistf1.GetXaxis().SetTitle('f_i')
+	DHistf1.GetYaxis().SetTitle('# of clusters')
+	DHistf1.GetYaxis().SetTitleOffset(1.5)
+	DHistf1.SetLineColor(1)
+	DHistf2.SetLineColor(2)
+	DHistf3.SetLineColor(3)
+	DHistf1.Draw()
+	DHistf2.Draw('SAME')
+	DHistf3.Draw('SAME')
+	l3 = rt.TLegend(0.9,0.9,0.65,0.75)
+	l3.AddEntry(DHistf1,'f_1')
+	l3.AddEntry(DHistf2,'f_2')
+	l3.AddEntry(DHistf3,'f_3')
+	l3.Draw()
+	c3.SaveAs('f_i-distribution.png')
+	
+
+			
 #Main function:
 
-def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, Axes=None, Save=False, dR_dist=False, EarlyBreak=0):
+def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, Axes=None, Save=False, dR_dist=False, LayerHist=False, EarlyBreak=0):
 	"""returns unique ID and coordinates of all pixel clusters that lie inside the dR-cone of a b-particle trajectory; optionally it returns also a 3D-plot
 		
 
@@ -159,8 +205,8 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 
 	Outputs:
 		list of tuples where each contains a tuple with a uniqe identification followed by global cartesian coordinates:((nEvent,nParticle,nLayer,nModule,nCluster),x,y,z)"""
+	
 	#colorstring for plots:
-	#color = ['b','g','r','c','m','y','k','w']
 	hsv = plt.get_cmap('hsv')
 	color = hsv(np.linspace(0,1.0,12))
 	c = 0 #initialize color index
@@ -170,13 +216,15 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 	tree = file.Get("demo/tree")
 	N = tree.GetEntries()
 	HitClusters = []
-	#hist = rt.TH1D('B-hadron Pt','B-hadron Pt',40,0.,510.)
+	L1, L2, L3, L4 = 0,0,0,0	
 	if dR_dist == True:
 		histL1 = rt.TH1D('DeltaR', 'DeltaR', 30, 0, dR)	
 		histL2 = rt.TH1D('DeltaR', 'DeltaR', 30, 0, dR)	
 		histL3 = rt.TH1D('DeltaR', 'DeltaR', 30, 0, dR)	
 		histL4 = rt.TH1D('DeltaR', 'DeltaR', 30, 0, dR)	
-		
+
+	cl_x, cl_y, dvx_x, dvx_y = [],[],[],[]
+
 	for i in xrange(N):
     		if i % 50 == 0: print "Working on event " ,i
 		if EarlyBreak > 0 and i>=EarlyBreak: break
@@ -204,6 +252,9 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
                         			phi = PolarPhi(v_p[0],v_p[1])
 						theta = Theta(v_p[0],v_p[1],v_p[2])
 						
+						#dvxHist.Fill(tree.genParticle_decayvx_x[k],tree.genParticle_decayvx_y[k])
+						dvx_x.append(tree.genParticle_decayvx_x[k])
+						dvx_y.append(tree.genParticle_decayvx_y[k])
 						if Plot == True:
 							t_max = TrajectoryLength(theta,v_p)
 							PlotTrajectory((tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k]),v_p,Axes,t_max,res,color[c],1,'--')
@@ -218,6 +269,10 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 								if DR<dR:
 									NearClusters.append(((i,k,tree.detUnit_layer[nModule],nModule,nCluster),tree.cluster_globalx[nModule][nCluster],\
 									tree.cluster_globaly[nModule][nCluster],tree.cluster_globalz[nModule][nCluster]))
+									#clHist.Fill(tree.cluster_globalx[nModule][nCluster],tree.cluster_globaly[nModule][nCluster])	
+									cl_x.append(tree.cluster_globalx[nModule][nCluster])
+									cl_y.append(tree.cluster_globaly[nModule][nCluster])
+									
 									if dR_dist == True:
 										if tree.detUnit_layer[nModule] == 1:
 											histL1.Fill(DR)
@@ -227,8 +282,16 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 											histL3.Fill(DR)
 										elif tree.detUnit_layer[nModule] == 4:
 											histL4.Fill(DR)
-
-
+									if LayerHist == True:
+										if tree.detUnit_layer[nModule] == 1:
+											L1 += 1
+										elif tree.detUnit_layer[nModule] == 2:
+											L2 += 2
+										elif tree.detUnit_layer[nModule] == 3:
+											L3 += 3
+										elif tree.detUnit_layer[nModule] == 4:
+											L4 += 4
+						
 						if  NearClusters == []:
 							break	
 						else:
@@ -283,26 +346,177 @@ def ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False
 		l1.Draw()
 		c1.SaveAs('DeltaR-dist.png')	
 
+	if LayerHist == True:
+		fig2, ax2 = plt.subplots(1,2,figsize=(9,5))
+		fig2.suptitle('Hit Clusters per Layer inside dR<'+str(dR))
+		ax2[0].bar([0.5,1.5,2.5,3.5],[L1,L2,L3,L4],align='center')
+		ax2[0].set_ylabel('Clusters')
+		ax2[0].set_xticks([0.5,1.5,2.5,3.5])
+		ax2[0].set_xticklabels(['L1','L2','L3','L4'])
+		ax2[1].bar([0.5,1.5,2.5],[L2/float(L1),L3/float(L2),L4/float(L3)],align='center')
+                ax2[1].set_ylabel('[a.u.]')
+                ax2[1].set_xticks([0.5,1.5,2.5])
+		ax2[1].set_xticklabels(['L2/L1','L3/L2','L4/L3'])
+		plt.tight_layout(pad=2.0,w_pad=0.5,h_pad=0.5)
+		fig2.savefig('HitsPerLayer.png')
+		plt.show()
+	'''
+	tClusterDR0.05onB-hadrons.pklfig3, ax3 = plt.subplots(1,2,figsize=(12,5))
+	#fig.suptitle(' ')
+	ax3[0].hist2d(dvx_x,dvx_y, bins=50,range=[[-20,20],[-20,20]])
+	ax3[0].set_title('Decay Vertices')
+	ax3[0].set_ylabel('y [cm]')
+	ax3[0].set_xlabel('x [cm]')
+	h = ax3[1].hist2d(cl_x,cl_y, bins=50,range=[[-20,20],[-20,20]])
+	ax3[1].set_title('Hit Clusters')
+	ax3[1].set_ylabel('y [cm]')
+	ax3[1].set_xlabel('x [cm]')
+	cbar_ax = fig3.add_axes([0.85,0.15,0.05,0.7])
+	cbar = fig3.colorbar(h[3],cax=cbar_ax,ticks = [np.min(h[0]),np.max(h[0])])
+	cbar.ax.set_yticklabels(['min','max'])
+	plt.tight_layout(pad=2.0,w_pad=0.5,h_pad=0.5)
+	fig3.subplots_adjust(right=0.8)
+	fig3.savefig('decayvx-clusters.png')
+	plt.show()
+	'''
 	return HitClusters
 	
 
+def ClusterMatch2DPlot(file, dR, MomentumThreshold, HadronsNotQuarks=False, grid=None, EarlyBreak=0):
+	#colorstring for plots:
+	hsv = plt.get_cmap('hsv')
+	color = hsv(np.linspace(0,1.0,12))
+	c = 0 #initialize color index
+	res = 50 #trajectory resolution
+	Plot = True
+	w,h = plt.figaspect(1)
+	fig = plt.figure(figsize=(w,h))
+	Axes = fig.add_subplot(111)
+	Axes.set_xlabel('x (cm)')
+	Axes.set_ylabel('y (cm)')
+	Axes.set_xlim(-20,20)
+	Axes.set_ylim(-20,20)
+	if grid != None:
+		Axes.scatter(grid[0],grid[1],c='k',s=1,linewidths=0.1)
+	
+	# open tree file
+	tree = file.Get("demo/tree")
+	N = tree.GetEntries()
+	HitClusters = []
+	for i in xrange(N):
+    		if i % 50 == 0: print "Working on event " ,i
+		if EarlyBreak > 0 and i>=EarlyBreak: break
+    		tree.GetEntry(i)
+    		for j in range(0,tree.nJets):
+        		jVector = rt.TLorentzVector()
+        		jVector.SetPtEtaPhiM(tree.jet_pt[j],tree.jet_eta[j],tree.jet_phi[j],tree.jet_mass[j])
+        		for k in range(0,tree.nGenParticles):
+				if HadronsNotQuarks == False:
+					pdgCriterion = abs(tree.genParticle_pdgId[k]) == 5
+					statusCriterion = tree.genParticle_status[k] == 23
+				else:
+					pdgCriterion = abs(tree.genParticle_pdgId[k]) > 500 and abs(tree.genParticle_pdgId[k]) < 600
+					statusCriterion = tree.genParticle_status[k] == 2 
+            			if statusCriterion and pdgCriterion:
+                    			pVector = rt.TLorentzVector()
+                    			pVector.SetPtEtaPhiM(tree.genParticle_pt[k],tree.genParticle_eta[k], \
+                        			tree.genParticle_phi[k],tree.genParticle_mass[k])
+                    			delR = jVector.DeltaR(pVector)
+					#if delR < 0.3:
+					#	hist.Fill(tree.genParticle_pt[k])                       
+                    			if delR < 0.3 and tree.genParticle_pt[k] > MomentumThreshold: #momentum threshold
+                        			v_p = normalize(np.array([pVector[0]/tree.genParticle_mass[k], pVector[1]/tree.genParticle_mass[k], \
+                                   			pVector[2]/tree.genParticle_mass[k]]))
+                        			phi = PolarPhi(v_p[0],v_p[1])
+						theta = Theta(v_p[0],v_p[1],v_p[2])
+						
+						if Plot == True:
+							t_max = 0.9*TrajectoryLength(theta,v_p)
+							PlotTrajectory2D((tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k]),v_p,Axes,t_max,res,color[c],1,'--')
+
+                        			NearClusters = [] #list that will contain for each hit cluster: ((nEvent,nParticle,nModule,nCluster),x,y,z)
+						for nModule,lenModule in enumerate(tree.nClusters): #finding all clusters inside deltaR<dR
+							for nCluster in xrange(0,lenModule):
+								ClusterTheta,ClusterPhi = ShiftedThetaPhi(tree.cluster_globalx[nModule][nCluster],\
+									tree.cluster_globaly[nModule][nCluster],tree.cluster_globalz[nModule][nCluster],\
+									tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k])
+								DR = DeltaR(theta,ClusterTheta,phi,ClusterPhi)
+								if DR<dR:
+									NearClusters.append(((i,k,tree.detUnit_layer[nModule],nModule,nCluster),tree.cluster_globalx[nModule][nCluster],\
+									tree.cluster_globaly[nModule][nCluster],tree.cluster_globalz[nModule][nCluster]))
+						if  NearClusters == []:
+							break	
+						else:
+							HitClusters.append(NearClusters) #summarizing the hit cluster ID for every event
+							X,Y,Z=[],[],[]
+							for entry in NearClusters:
+								X.append(entry[1])
+								Y.append(entry[2])
+								Z.append(entry[3])
+                        				if Plot == True:
+								Axes.scatter(X,Y,c=color[c],s=9,linewidths=0.1) #plots all the hit clusters
+								if c != len(color)-1:
+                        						c += 1
+                        					else:
+                            						c = 0
+	if Plot == True:
+		plt.savefig("Thesis_Plots/Trajectories_Clusters2D.png")
+		print "saved as Thesis_Plots/Trajectories_Clusters2D.png"
+		plt.show()
+
 if __name__ == '__main__':
 	
-	file = rt.TFile("flatTuple.root",'READ')
+	#file = rt.TFile("flatTuple.root",'READ')
+	#file = rt.TFile("/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/2000/ZprimeBBbar_M2000_GENSIMDIGIRECO.root","READ")
+	#file = rt.TFile("/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/4000/ZprimeBBbar_M4000_GENSIMDIGIRECO.root","READ")
 
-	dR = 0.1 #DeltaR threshold for counting clusters
+	dR = 0.05 #DeltaR threshold for counting clusters
 	MomentumThreshold = 350
 
-	with open("Grid.pkl",) as f:	#open coordinates of DetUnits for visual reference
-		Grid = pickle.load(f)
-
-	ax = Initialize3DPlot('Particle Trajectories', 'x', 'y', 'z', grid=Grid)
-	HitClusters =  ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=True, Plot=True, Axes=ax, Save=False, dR_dist = False, EarlyBreak=10)
+	#with open("Grid.pkl",) as f:	#open coordinates of DetUnits for visual reference
+	#	Grid = pickle.load(f)
+	
+	#with open("HitClusterDR0.05onB-hadrons.pkl",) as f:	#open coordinates of DetUnits for visual reference
+	#	HitClusters = pickle.load(f)
+	#print len(HitClusters)
+	#ax = Initialize3DPlot('Particle Trajectories', 'x', 'y', 'z', grid=Grid)
+	#HitClusters =  ClusterMatch(file, dR, MomentumThreshold, HadronsNotQuarks=True, Plot=False, Axes=None, Save=False, dR_dist = False, LayerHist=False, EarlyBreak=0)
+	
+	#DHistf(HitClusters)
 
 	#with open("HitClusterDR0.1onB-hadrons.pkl",) as f:	#take data from file instead of running entire function
 	#	HitClusters = pickle.load(f)
 	
 	#Count hits per layer for each particle
+
+	#Background_file = rt.TFile("/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8.root","READ")
+	Background_file = rt.TFile("/afs/cern.ch/work/t/thaarres/public/bTag_ntracks/qcd.root","READ")
+	nP = 0
+	statusHist = rt.TH1D('status','status',110,0,109)
+        tree = Background_file.Get("demo/tree")
+        nBGE = tree.GetEntries()
+        for i in xrange(0,nBGE):
+                tree.GetEntry(i)
+		if i>50000: break
+                if i%100 == 0: print "working on event", i
+                for particle in range(0,tree.nGenParticles):
+			if tree.genParticle_status[particle] == 23: nP += 1
+        		statusHist.Fill(tree.genParticle_status[particle])
+        canvas = rt.TCanvas('canvas','canvas',600,600)
+        canvas.SetTitle("status")
+        statusHist.GetXaxis().SetTitle("status")
+        statusHist.GetYaxis().SetTitle('# particles')
+        statusHist.GetYaxis().SetTitleOffset(1.5)
+        statusHist.SetLineColor(2)
+        statusHist.Draw()
+        canvas.SaveAs('BGstatus1stFile.png')
+        print "number of background events: ", nBGE
+        print "Total Number of Background particles ", nP
+        #nBG = 0
+        #for entry in Backgrounddata:
+        #        nBG += len(entry)
+        #print "Total number of clusters hit by background: ", nBG
+
 	
 	'''
 	#Plot all clusters and all particles
