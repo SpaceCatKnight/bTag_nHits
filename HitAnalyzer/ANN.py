@@ -6,7 +6,7 @@ import pickle
 import csv
 from sklearn.metrics import roc_curve
 
-print "packages imported"
+print "packages imported."
 
 
 #different models
