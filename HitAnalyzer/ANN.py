@@ -382,7 +382,7 @@ def Plot_General_ROCs(title,datalist, x_min=0.1, x_max=0.8, y_min=0.005,folder="
 			plt.semilogy(entry[0],entry[1],color=entry[3],label=entry[2])
 		else:
 			plt.semilogy(entry[0],entry[1],color=c[n],label=entry[2])
-	plt.semilogy([0,1],[0.1,0.1],'k:',label='10% mistag')
+	plt.semilogy([0,1],[0.1,0.1],'k:')#,label='10% mistag')
 	plt.xlabel(r"signal efficiency")
 	plt.ylabel(r"mistag rate")
 	if DrawTitle: plt.title("ROC-Curves_"+title)
@@ -502,10 +502,10 @@ if __name__ == "__main__":
 	#Compare_GRID_ANNs()
 	pT_bins = [0,1200,3000]
 	
-	#Compare_GRID_ANNs_ROC1()
-	#Compare_GRID_ANNs_ROC2()	
-	#Compare_GRID_ANNs_ROC3()
-	#Compare_GRID_ANNs_ROC_PU1()	
+	Compare_GRID_ANNs_ROC1()
+	Compare_GRID_ANNs_ROC2()	
+	Compare_GRID_ANNs_ROC3()
+	Compare_GRID_ANNs_ROC_PU1()	
 
 	for n in range(len(pT_bins)-1):
 		Compare_GRID_ANNs_on_pT_range(pT_bins[n],pT_bins[n+1])

@@ -1,0 +1,42 @@
+        #load necessary data
+
+
+
+        #Analysis of samples: mass, pT, eta?, decayvx, CSV on quarks hadrons jets
+
+
+        #nice plot illustrating cluster matching
+
+
+        #maybe plot showing detector modules in position space
+
+
+        #dR-discussion plots: dR-distribution and dR-dependng ROCs
+
+
+        #satisfactory example of decay after first layer falsely reconstructed by CSV
+
+
+        #hits per layer analysis: 'global' hits per layer, '
+
+
+        #comparison of delta- and ratio-taggers for different layer combinations
+
+
+        #discriminant histograms
+
+
+        #ROC-curves. global and binned
+
+
+        #tagged jets vs pT (also exclusive
+
+
+        #efficiency vs pT
+
+
+        #comparison of different ANN models
+
+
+        #PU study: most important plots in comparison
+

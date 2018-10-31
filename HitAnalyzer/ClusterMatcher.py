@@ -397,7 +397,7 @@ def ClusterMatch2DPlot(file, dR, MomentumThreshold, HadronsNotQuarks=False, grid
 	Axes.set_xlim(-20,20)
 	Axes.set_ylim(-20,20)
 	if grid != None:
-		Axes.scatter(grid[0],grid[1],c='k',s=1,linewidths=0.1)
+		Axes.scatter(grid[0],grid[1],c='k',s=2,linewidths=0.1)
 	
 	# open tree file
 	tree = file.Get("demo/tree")

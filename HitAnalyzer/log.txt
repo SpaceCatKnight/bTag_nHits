@@ -1,0 +1,139 @@
+[msommerh@lxplus095 HitAnalyzer]$ python DisHist2.py
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L2_L1 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L2_L1 (Potential memory leak).
+Background sample has 17194 out of 52456 zero-divsion entries -> 32.777947232 %
+2Tev-signal sample has 13 out of 97 zero-divsion entries -> 13.4020618557 %
+4Tev-signal sample has 5374 out of 37726 zero-divsion entries -> 14.2448178975 %
+Info in <TCanvas::Print>: file discriminants/L2_L1DR0.04.png has been created
+saved as discriminants/L2_L1DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L3_L1 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L3_L1 (Potential memory leak).
+Background sample has 20365 out of 52456 zero-divsion entries -> 38.8230135733 %
+2Tev-signal sample has 16 out of 97 zero-divsion entries -> 16.4948453608 %
+4Tev-signal sample has 6377 out of 37726 zero-divsion entries -> 16.9034618035 %
+Info in <TCanvas::Print>: file discriminants/L3_L1DR0.04.png has been created
+saved as discriminants/L3_L1DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L1 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L1 (Potential memory leak).
+Background sample has 24777 out of 52456 zero-divsion entries -> 47.2338721977 %
+2Tev-signal sample has 26 out of 97 zero-divsion entries -> 26.8041237113 %
+4Tev-signal sample has 8774 out of 37726 zero-divsion entries -> 23.2571701214 %
+Info in <TCanvas::Print>: file discriminants/L4_L1DR0.04.png has been created
+saved as discriminants/L4_L1DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L3_L2 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L3_L2 (Potential memory leak).
+Background sample has 20501 out of 52456 zero-divsion entries -> 39.082278481 %
+2Tev-signal sample has 17 out of 97 zero-divsion entries -> 17.5257731959 %
+4Tev-signal sample has 6976 out of 37726 zero-divsion entries -> 18.49122621 %
+Info in <TCanvas::Print>: file discriminants/L3_L2DR0.04.png has been created
+saved as discriminants/L3_L2DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L2 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L2 (Potential memory leak).
+Background sample has 26141 out of 52456 zero-divsion entries -> 49.8341467134 %
+2Tev-signal sample has 30 out of 97 zero-divsion entries -> 30.9278350515 %
+4Tev-signal sample has 10341 out of 37726 zero-divsion entries -> 27.4108042199 %
+Info in <TCanvas::Print>: file discriminants/L4_L2DR0.04.png has been created
+saved as discriminants/L4_L2DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L3 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L3 (Potential memory leak).
+Background sample has 24355 out of 52456 zero-divsion entries -> 46.4293884398 %
+2Tev-signal sample has 27 out of 97 zero-divsion entries -> 27.8350515464 %
+4Tev-signal sample has 9378 out of 37726 zero-divsion entries -> 24.8581879871 %
+Info in <TCanvas::Print>: file discriminants/L4_L3DR0.04.png has been created
+saved as discriminants/L4_L3DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L2_L1 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L2_L1 (Potential memory leak).
+Background sample has 17194 out of 52456 zero-divsion entries -> 32.777947232 %
+2TeV-signal sample has 13 out of 97 zero-divsion entries -> 13.4020618557 %
+4Tev-signal sample has 5374 out of 37726 zero-divsion entries -> 14.2448178975 %
+Info in <TCanvas::Print>: file discriminants/L2_L1DR0.04.png has been created
+saved as discriminants/L2_L1DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L3_L1 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L3_L1 (Potential memory leak).
+Background sample has 20365 out of 52456 zero-divsion entries -> 38.8230135733 %
+2TeV-signal sample has 16 out of 97 zero-divsion entries -> 16.4948453608 %
+4Tev-signal sample has 6377 out of 37726 zero-divsion entries -> 16.9034618035 %
+Info in <TCanvas::Print>: file discriminants/L3_L1DR0.04.png has been created
+saved as discriminants/L3_L1DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L1 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L1 (Potential memory leak).
+Background sample has 24777 out of 52456 zero-divsion entries -> 47.2338721977 %
+2TeV-signal sample has 26 out of 97 zero-divsion entries -> 26.8041237113 %
+4Tev-signal sample has 8774 out of 37726 zero-divsion entries -> 23.2571701214 %
+Info in <TCanvas::Print>: file discriminants/L4_L1DR0.04.png has been created
+saved as discriminants/L4_L1DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L3_L2 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L3_L2 (Potential memory leak).
+Background sample has 20501 out of 52456 zero-divsion entries -> 39.082278481 %
+2TeV-signal sample has 17 out of 97 zero-divsion entries -> 17.5257731959 %
+4Tev-signal sample has 6976 out of 37726 zero-divsion entries -> 18.49122621 %
+Info in <TCanvas::Print>: file discriminants/L3_L2DR0.04.png has been created
+saved as discriminants/L3_L2DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L2 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L2 (Potential memory leak).
+Background sample has 26141 out of 52456 zero-divsion entries -> 49.8341467134 %
+2TeV-signal sample has 30 out of 97 zero-divsion entries -> 30.9278350515 %
+4Tev-signal sample has 10341 out of 37726 zero-divsion entries -> 27.4108042199 %
+Info in <TCanvas::Print>: file discriminants/L4_L2DR0.04.png has been created
+saved as discriminants/L4_L2DR0.04.png
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L3 (Potential memory leak).
+TROOT::Append:0: RuntimeWarning: Replacing existing TH1: L4_L3 (Potential memory leak).
+Background sample has 24355 out of 52456 zero-divsion entries -> 46.4293884398 %
+2TeV-signal sample has 27 out of 97 zero-divsion entries -> 27.8350515464 %
+4Tev-signal sample has 9378 out of 37726 zero-divsion entries -> 24.8581879871 %
+Info in <TCanvas::Print>: file discriminants/L4_L3DR0.04.png has been created
+saved as discriminants/L4_L3DR0.04.png
+[msommerh@lxplus095 HitAnalyzer]$ cat
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -158,11 +158,11 @@ def Efficient_Layer_Hist2(title,data,dR,minR=0,minPT1=200,minPT2=1000,Save=False
                         L3_th += particle[dR_tag+2]
                         L4_th += particle[dR_tag+3]
 
-        fig2, ax2 = plt.subplots(1,2,figsize=(9,5))
+        fig2, ax2 = plt.subplots(2,1,figsize=(4.5,9))
         #fig2.suptitle('Hit Clusters per Layer inside dR<'+str(dR)+' on '+title+' sample')
         ax2[0].bar([0.5,1.5,2.5,3.5],[L1,L2,L3,L4],align='center')
 	ax2[0].set_title(r"jet $p_T$ > {} GeV".format(minPT1))
-        ax2[0].set_ylabel('# Clusters')
+        ax2[0].set_ylabel('# clusters')
         ax2[0].set_xticks([0.5,1.5,2.5,3.5])
         ax2[0].set_xticklabels(['L1','L2','L3','L4'])
         ax2[1].bar([0.5,1.5,2.5,3.5],[L1_th, L2_th, L3_th, L4_th],align='center')
@@ -170,6 +170,7 @@ def Efficient_Layer_Hist2(title,data,dR,minR=0,minPT1=200,minPT2=1000,Save=False
         #ax2[1].set_ylabel('[a.u.]')
         ax2[1].set_xticks([0.5,1.5,2.5,3.5])
         ax2[1].set_xticklabels(['L1','L2','L3','L4'])
+	ax2[1].set_ylabel('# clusters')
         plt.tight_layout(pad=2.0,w_pad=0.5,h_pad=0.5)
         if Save:
         	fig2.savefig('Thesis_Plots/HitsPerLayer'+title+'.png')
@@ -273,6 +274,9 @@ def General_Make_ROC_Curves(title, histlist,log=False, print_cut=False, dR=None)
         #color = ['b', 'g', 'r', 'c', 'm', 'y']
         if len(histlist)<=6:
                 color = ['red','green','blue','orange','brown','black']
+	#if len(histlist)<=7:
+        #        color = ['red','green','blue','orange','brown','cyan','black']
+
         else:
                 color = ['deepskyblue','rosybrown','olivedrab','royalblue','firebrick','chartreuse','navy','red','darkorchid','lightseagreen','mediumvioletred','blue']
         ratio_ran = (0,10)
@@ -420,9 +424,11 @@ def Efficiency_vs_pT(title,histlist, hist_all_jets,y_max,Save=False,legend_shift
         canvas = rt.TCanvas('canvas','canvas',600,600)
         if legend_shift:
 		if LargeLegend:
-			legend = rt.TLegend(0.1,0.1,0.4,0.3)
+			#legend = rt.TLegend(0.1,0.1,0.4,0.3)
+			legend = rt.TLegend(0.6,0.9,0.7,0.9)
 		else:
-                	legend = rt.TLegend(0.1,0.1,0.35,0.25)
+                	#legend = rt.TLegend(0.1,0.1,0.35,0.25)
+			legend = rt.TLegend(0.65,0.75,0.9,0.9)
         else:
 		if LargeLegend:
 			legend = rt.TLegend(0.1,0.9,0.4,0.7)
@@ -556,13 +562,18 @@ def Make_Binned_ROC_Curves(title,Signal_title,Background_title,bins, diff=False,
                 Dis_BG_Eff = FCM.Get_ROC_Efficiencies(Background_file.Get(dis_string+str(bins[bin_])+"_"+str(bins[bin_+1])),ran,nbins,Background_ZeroDiv[bin_])
                 CSV_Signal_Eff = FCM.Get_ROC_Efficiencies(Signal_file.Get("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),ratio_bins,0)
                 CSV_BG_Eff = FCM.Get_ROC_Efficiencies(Background_file.Get("CSV_"+str(bins[bin_])+"_"+str(bins[bin_+1])),(0,1),ratio_bins,0)
-                if log:
-                        plt.semilogy(Dis_Signal_Eff,Dis_BG_Eff, color = color[bin_], linestyle = '-',label=str(bins[bin_])+"_"+str(bins[bin_+1]))
+		if log:
+			if bins[bin_] == 0:
+				plt.semilogy(Dis_Signal_Eff,Dis_BG_Eff, color = color[bin_], linestyle = '-',label=str(200)+"-"+str(bins[bin_+1])+' GeV')
+			else:
+                        	plt.semilogy(Dis_Signal_Eff,Dis_BG_Eff, color = color[bin_], linestyle = '-',label=str(bins[bin_])+"-"+str(bins[bin_+1])+' GeV')
                         plt.semilogy(CSV_Signal_Eff,CSV_BG_Eff, color = color[bin_],linestyle = '--',)
 
                 else:
-                        plt.plot(Dis_Signal_Eff,1-Dis_BG_Eff, color = color[bin_], linestyle = '-',label=str(bins[bin_])+"_"+str(bins[bin_+1]))
-                        plt.plot(CSV_Signal_Eff,1-CSV_BG_Eff, color = color[bin_],linestyle = '--',)
+			if bins[bin_] == 0:
+                        	plt.plot(Dis_Signal_Eff,1-Dis_BG_Eff, color = color[bin_], linestyle = '-',label=str(bins[bin_])+"-"+str(bins[bin_+1])+" GeV")
+                        else:
+				plt.plot(CSV_Signal_Eff,1-CSV_BG_Eff, color = color[bin_],linestyle = '--',)
 
         if log:
 		if ANN:
@@ -1377,9 +1388,10 @@ def ANN_efficiency_vs_PU_pT_PV(title, x_data, pT, CSV, model_noPT, model_withPT,
 	ANN_withPV_Graph.SetLineColor(7)
 	Ratio_Graph.SetLineColor(2)
         CSV_Graph.SetLineColor(4)
-        legend.AddEntry(ANN_noPT_Graph, "ANN without p_{T}/PV", "LEP")
+        #legend.AddEntry(ANN_noPT_Graph, "ANN without p_{T}/PV", "LEP")
+	legend.AddEntry(ANN_noPT_Graph, "ANN without p_{T}", "LEP")
         legend.AddEntry(ANN_withPT_Graph, "ANN with p_{T}", "LEP")
-	legend.AddEntry(ANN_withPV_Graph, "ANN with PV", "LEP")
+	#legend.AddEntry(ANN_withPV_Graph, "ANN with PV", "LEP")
 	legend.AddEntry(Ratio_Graph, "L4/L1", "LEP")
         legend.AddEntry(CSV_Graph, "CSV", "LEP")
         Ratio_Graph.GetXaxis().SetTitle("#PV")
@@ -1393,7 +1405,7 @@ def ANN_efficiency_vs_PU_pT_PV(title, x_data, pT, CSV, model_noPT, model_withPT,
         Ratio_Graph.Draw()
         ANN_noPT_Graph.Draw("SAME")
 	ANN_withPT_Graph.Draw("SAME")
-	ANN_withPV_Graph.Draw("SAME")
+	#ANN_withPV_Graph.Draw("SAME")
         CSV_Graph.Draw("SAME")
         legend.Draw()
         canvas.SaveAs('Thesis_Plots/'+title+"_vs_PU_pT{}{}.png".format('jet',pT_Cut))
@@ -1428,6 +1440,7 @@ def Stacked_tagged_jets(title, Discriminant_Name, AllJets, Discriminant_and_not_
 	if y_max >0: AllJets_hist.SetMaximum(y_max)
         AllJets_hist.Draw()
 	stack.Draw("SAME")
+	rt.gPad.RedrawAxis()
         legend.Draw()
         canvas.SaveAs("Thesis_Plots/stacked_"+title+".png")
 
@@ -1529,10 +1542,10 @@ def Draw_dR_dist_Histograms(title, L1_hist,L2_hist,L3_hist,L4_hist):
 	L2.SetLineColor(3)
 	L3.SetLineColor(4)
 	L4.SetLineColor(6)
-	legend.AddEntry(L1,'L1')
-	legend.AddEntry(L2,'L2')
-	legend.AddEntry(L3,'L3')
-	legend.AddEntry(L4,'L4')
+	legend.AddEntry(L1,'Layer 1')
+	legend.AddEntry(L2,'Layer 2')
+	legend.AddEntry(L3,'Layer 3')
+	legend.AddEntry(L4,'Layer 4')
 	L4.GetXaxis().SetTitle(xlabel)
         L4.GetYaxis().SetTitle(ylabel)
         L4.GetYaxis().SetTitleOffset(1.5)
@@ -1644,17 +1657,17 @@ if __name__ == '__main__':
 	for i in range(1,501):
 		BG_PU_String_list.append(BG_PU_String.format(i))
 	
-	'''
-	Signal_4TeV_noPU = np.load('matched_clusters/Signal_noPU/MatchedClusters_4TeV-Signal.npy')
-        Signal_2TeV_noPU = np.load('matched_clusters/Signal_noPU/MatchedClusters_2TeV-Signal.npy')
-        Signal_both_noPU = np.vstack((Signal_4TeV_noPU,Signal_2TeV_noPU))
+	
+	#Signal_4TeV_noPU = np.load('matched_clusters/Signal_noPU/MatchedClusters_4TeV-Signal.npy')
+        #Signal_2TeV_noPU = np.load('matched_clusters/Signal_noPU/MatchedClusters_2TeV-Signal.npy')
+        #Signal_both_noPU = np.vstack((Signal_4TeV_noPU,Signal_2TeV_noPU))
         #Background_noPU = FCM.load_data('BG','matched_clusters/BG_noPU/',31, old_version=True)#31
-        '''
+        
 	'''		
 	Signal_4TeV_PU = FCM.load_data('4TeV-Signal_PU','matched_clusters/Signal_PU/',15)
         Signal_2TeV_PU = FCM.load_data('2TeV-Signal_PU','matched_clusters/Signal_PU/',19)
         Signal_both_PU = np.vstack((Signal_4TeV_PU,Signal_2TeV_PU))
-        #Background_PU = FCM.load_data('BG_PU','matched_clusters/BG_PU/',499)	
+        Background_PU = FCM.load_data('BG_PU','matched_clusters/BG_PU/',499)	
 	'''
 	#Analysis of samples: mass?, pT, eta?, decayvx, CSV on quarks hadrons jets
 
@@ -1687,9 +1700,6 @@ if __name__ == '__main__':
 	
 	decayvx_plots(decayvx_hist_2TeV,decayvx_hist_4TeV,decayvx_hist_BG)
 	'''
-	
-
-	
 	'''
 	#Efficient_Sample_Analysis("Signal_2TeV_CSV", Signal_2TeV_noPU, (0,1), "CSV")
 	#Efficient_Sample_Analysis("Signal_4TeV_CSV", Signal_4TeV_noPU, (0,1), "CSV")
@@ -1703,19 +1713,25 @@ if __name__ == '__main__':
 	Histograms = [(CSV_hist_BG,"background"),(CSV_hist_2TeV,"2TeV signal"),(CSV_hist_4TeV,"4TeV signal")]
 	DrawHistograms(Histograms, (0,1), "CSV_b-tag", "p(b-jet)","(a.u.)", Save=True,Normalize=True, t_sleep=0)
 	'''
+	'''
+	M2TeV_file = rt.TFile.Open("histogram_files/CheckInvariantMass_2TeV.root"); M2TeV = M2TeV_file.Get("M")
+	M4TeV_file = rt.TFile.Open("histogram_files/CheckInvariantMass_4TeV.root"); M4TeV = M4TeV_file.Get("M")
+	Histograms = [(M2TeV,"2TeV signal",3),(M4TeV,"4TeV signal",4)]
+        DrawHistograms(Histograms, (0,5000), "Invariant_Mass", "M (GeV)","(a.u.)", Save=True,Normalize=True, t_sleep=0)
+	'''
+
 
 	#nice plot illustrating cluster matching
 
-		
-	with open("Grid.pkl",) as f:   #open coordinates of DetUnits for visual reference
-               Grid = pickle.load(f)
-	ax = FCM.Initialize3DPlot('', 'x (cm)', 'y (cm)', 'z (cm)', grid=Grid)
-	HitClusters = CM.ClusterMatch(rt.TFile.Open(Signal_4TeV_noPU_String.format(20)), 0.1, 350, HadronsNotQuarks=True, Plot=True, Axes=ax, Save=False, dR_dist=False, LayerHist=False, EarlyBreak=5)
-	CM.ClusterMatch2DPlot(rt.TFile.Open(Signal_4TeV_noPU_String.format(20)), 0.1, 350, HadronsNotQuarks=True, grid=Grid, EarlyBreak=5)
+	'''	
+	#with open("Grid.pkl",) as f:   #open coordinates of DetUnits for visual reference
+        #       Grid = pickle.load(f)
+	#ax = FCM.Initialize3DPlot('', 'x (cm)', 'y (cm)', 'z (cm)', grid=Grid)
+	#HitClusters = CM.ClusterMatch(rt.TFile.Open(Signal_4TeV_noPU_String.format(20)), 0.1, 350, HadronsNotQuarks=True, Plot=True, Axes=ax, Save=False, dR_dist=False, LayerHist=False, EarlyBreak=5)
+	CM.ClusterMatch2DPlot(rt.TFile.Open(Signal_4TeV_noPU_String.format(20)), 0.1, 350, HadronsNotQuarks=True, grid=np.load('Grid2D.npy'), EarlyBreak=5)
+	'''
 
-
-	
-	#satisfactory example of decay after first layer falsely reconstructed by CSV	
+	#satisfactory example of decay after first layer falsely reconstructed by CSV	(obsolete)
 	'''
 	ax = FCM.Initialize3DPlot('SV Misalignment', 'x', 'y', 'z', grid=None)	
 	X = [-1.5856226682662964, -1.5129914283752441, -1.4635052680969238, -1.463505744934082, -1.4635061025619507, -1.4563225507736206, -1.456322193145752, -1.3988516330718994, -3.379647731781006, -3.5370419025421143, -3.546525716781616, -3.5509400367736816, -3.553328514099121, -3.54559588432312, -3.558265209197998, -3.5627031326293945, -3.6817047595977783, -3.9403369426727295, -6.279918193817139, -8.275765419006348, -8.118766784667969, -8.110627174377441, -8.085073471069336, -8.053303718566895, -8.031609535217285, -8.011832237243652, -8.017459869384766, -7.996641159057617, -7.987757205963135, -7.982624053955078, -7.87465238571167, -7.837876796722412, -7.788309097290039, -7.677995681762695]
@@ -1738,7 +1754,7 @@ if __name__ == '__main__':
 	Efficient_Layer_Hist2("4TeV",Signal_4TeV_noPU,0.1,minR=0,minPT1=200,minPT2=1000,Save=True)
 	Efficient_Layer_Hist2("2TeV",Signal_2TeV_noPU,0.1,minR=0,minPT1=200,minPT2=1000,Save=True)
 	Efficient_Layer_Hist2("Background",Background_noPU,0.1,minR=0,minPT1=200,minPT2=1000,Save=True)
-	FCM.Efficient_SeparateLayerHist([(Signal_2TeV_noPU,"2TeV"),(Signal_4TeV_noPU,"4TeV"),(Background_noPU,"Background")], (0,30), 0.1 , minPT=200,jet_pT=True, Save=True)
+	#FCM.Efficient_SeparateLayerHist([(Signal_2TeV_noPU,"2TeV"),(Signal_4TeV_noPU,"4TeV"),(Background_noPU,"Background")], (0,30), 0.1 , minPT=200,jet_pT=True, Save=True)
 	'''
 	
 	#comparison of delta- and ratio-taggers for different layer combinations (ROC-Curves)
@@ -1763,6 +1779,9 @@ if __name__ == '__main__':
 	if len(sys.argv) > 1: dR = sys.argv[1] #most efficient way to make ROC curves for all values of dR is by putting it in externally as additional parameter
 	tfile_4TeV= rt.TFile.Open("Thesis_Plots/root_files/GeneralROCHists_4TeV_dR{}.root".format(dR))
 	tfile_BG = rt.TFile.Open("Thesis_Plots/root_files/GeneralROCHists_BG_dR{}.root".format(dR))
+	
+	signal_4TeV_CSV = tfile_4TeV.Get("CSV")
+	bg_CSV = tfile_BG.Get("CSV")
 		
 	signal_4TeV_ratio_21 = tfile_4TeV.Get("L2_L1")
 	signal_4TeV_ratio_31 = tfile_4TeV.Get("L3_L1")
@@ -1794,13 +1813,17 @@ if __name__ == '__main__':
 
 	ratio_histlist = [(signal_4TeV_ratio_21, bg_ratio_21, "L2/L1", "ratio", signal_4TeV_ZeroDiv_21, bg_ZeroDiv_21), (signal_4TeV_ratio_31, bg_ratio_31, "L3/L1", "ratio", signal_4TeV_ZeroDiv_31, bg_ZeroDiv_31), (signal_4TeV_ratio_41, bg_ratio_41, "L4/L1", "ratio", signal_4TeV_ZeroDiv_41, bg_ZeroDiv_41), (signal_4TeV_ratio_32, bg_ratio_32, "L3/L2", "ratio", signal_4TeV_ZeroDiv_32, bg_ZeroDiv_32), (signal_4TeV_ratio_42, bg_ratio_42, "L4/L2", "ratio", signal_4TeV_ZeroDiv_42, bg_ZeroDiv_42), (signal_4TeV_ratio_43, bg_ratio_43, "L4/L3", "ratio", signal_4TeV_ZeroDiv_43, bg_ZeroDiv_43)]
 
+	#ratio_histlist = [(signal_4TeV_ratio_21, bg_ratio_21, "L2/L1", "ratio", signal_4TeV_ZeroDiv_21, bg_ZeroDiv_21), (signal_4TeV_ratio_31, bg_ratio_31, "L3/L1", "ratio", signal_4TeV_ZeroDiv_31, bg_ZeroDiv_31), (signal_4TeV_ratio_41, bg_ratio_41, "L4/L1", "ratio", signal_4TeV_ZeroDiv_41, bg_ZeroDiv_41), (signal_4TeV_ratio_32, bg_ratio_32, "L3/L2", "ratio", signal_4TeV_ZeroDiv_32, bg_ZeroDiv_32), (signal_4TeV_ratio_42, bg_ratio_42, "L4/L2", "ratio", signal_4TeV_ZeroDiv_42, bg_ZeroDiv_42), (signal_4TeV_ratio_43, bg_ratio_43, "L4/L3", "ratio", signal_4TeV_ZeroDiv_43, bg_ZeroDiv_43),(signal_4TeV_CSV, bg_CSV, "CSV", "CSV", 0, 0)]
+
 	diff_histlist = [(signal_4TeV_diff_21, bg_diff_21, "L2-L1", "diff", 0, 0), (signal_4TeV_diff_31, bg_diff_31, "L3-L1", "diff", 0, 0), (signal_4TeV_diff_41, bg_diff_41, "L4-L1", "diff", 0, 0), (signal_4TeV_diff_32, bg_diff_32, "L3-L2", "diff", 0, 0), (signal_4TeV_diff_42, bg_diff_42, "L4-L2", "diff", 0, 0), (signal_4TeV_diff_43, bg_diff_43, "L4-L3", "diff", 0, 0)]
+
+	#diff_histlist = [(signal_4TeV_diff_21, bg_diff_21, "L2-L1", "diff", 0, 0), (signal_4TeV_diff_31, bg_diff_31, "L3-L1", "diff", 0, 0), (signal_4TeV_diff_41, bg_diff_41, "L4-L1", "diff", 0, 0), (signal_4TeV_diff_32, bg_diff_32, "L3-L2", "diff", 0, 0), (signal_4TeV_diff_42, bg_diff_42, "L4-L2", "diff", 0, 0), (signal_4TeV_diff_43, bg_diff_43, "L4-L3", "diff", 0, 0),(signal_4TeV_CSV, bg_CSV, "CSV", "CSV", 0, 0)]
 
 	dR_string = str(dR).translate(None,'.')
 	General_Make_ROC_Curves("ratio_taggers_dR{}".format(dR_string), ratio_histlist,log=True,dR=dR)
 	General_Make_ROC_Curves("diff_taggers_dR{}".format(dR_string), diff_histlist,log=True,dR=dR)
 	'''
-	#Discriminant Histograms corresponding to the best discriminants: L4/L1 at dR<0.1 and L4-L1 at dR<0.04
+	#Discriminant Histograms corresponding to all combinatinos of discriminants: ratios at dR<0.1 and deltas at dR<0.04
 	'''
 	tfile_2TeV_004 = rt.TFile.Open("Thesis_Plots/root_files/GeneralROCHists_2TeV_dR{}.root".format(0.04))
 	tfile_4TeV_004 = rt.TFile.Open("Thesis_Plots/root_files/GeneralROCHists_4TeV_dR{}.root".format(0.04))
@@ -1808,20 +1831,32 @@ if __name__ == '__main__':
 	tfile_2TeV_01 = rt.TFile.Open("Thesis_Plots/root_files/GeneralROCHists_2TeV_dR{}.root".format(0.1))
 	tfile_4TeV_01 = rt.TFile.Open("Thesis_Plots/root_files/GeneralROCHists_4TeV_dR{}.root".format(0.1))
 	tfile_BG_01 = rt.TFile.Open("Thesis_Plots/root_files/GeneralROCHists_BG_dR{}.root".format(0.1))
+		
+	ratio_L2_L1_2TeV = tfile_2TeV_01.Get("L2_L1"); ratio_L3_L1_2TeV = tfile_2TeV_01.Get("L3_L1"); ratio_L4_L1_2TeV = tfile_2TeV_01.Get("L4_L1")
+	ratio_L3_L2_2TeV = tfile_2TeV_01.Get("L3_L2"); ratio_L4_L2_2TeV = tfile_2TeV_01.Get("L4_L2"); ratio_L4_L3_2TeV = tfile_2TeV_01.Get("L4_L3")
+	ratio_L2_L1_4TeV = tfile_4TeV_01.Get("L2_L1"); ratio_L3_L1_4TeV = tfile_4TeV_01.Get("L3_L1"); ratio_L4_L1_4TeV = tfile_4TeV_01.Get("L4_L1")
+	ratio_L3_L2_4TeV = tfile_4TeV_01.Get("L3_L2"); ratio_L4_L2_4TeV = tfile_4TeV_01.Get("L4_L2"); ratio_L4_L3_4TeV = tfile_4TeV_01.Get("L4_L3")
+	ratio_L2_L1_BG = tfile_BG_01.Get("L2_L1"); ratio_L3_L1_BG = tfile_BG_01.Get("L3_L1"); ratio_L4_L1_BG = tfile_BG_01.Get("L4_L1")
+	ratio_L3_L2_BG = tfile_BG_01.Get("L3_L2"); ratio_L4_L2_BG = tfile_BG_01.Get("L4_L2"); ratio_L4_L3_BG = tfile_BG_01.Get("L4_L3")
+	diff_L2_L1_2TeV = tfile_2TeV_01.Get("L2-L1"); diff_L3_L1_2TeV = tfile_2TeV_01.Get("L3-L1"); diff_L4_L1_2TeV = tfile_2TeV_01.Get("L4-L1")
+	diff_L3_L2_2TeV = tfile_2TeV_01.Get("L3-L2"); diff_L4_L2_2TeV = tfile_2TeV_01.Get("L4-L2"); diff_L4_L3_2TeV = tfile_2TeV_01.Get("L4-L3")
+	diff_L2_L1_4TeV = tfile_4TeV_01.Get("L2-L1"); diff_L3_L1_4TeV = tfile_4TeV_01.Get("L3-L1"); diff_L4_L1_4TeV = tfile_4TeV_01.Get("L4-L1")
+	diff_L3_L2_4TeV = tfile_4TeV_01.Get("L3-L2"); diff_L4_L2_4TeV = tfile_4TeV_01.Get("L4-L2"); diff_L4_L3_4TeV = tfile_4TeV_01.Get("L4-L3")
+	diff_L2_L1_BG = tfile_BG_01.Get("L2-L1"); diff_L3_L1_BG = tfile_BG_01.Get("L3-L1"); diff_L4_L1_BG = tfile_BG_01.Get("L4-L1")
+	diff_L3_L2_BG = tfile_BG_01.Get("L3-L2"); diff_L4_L2_BG = tfile_BG_01.Get("L4-L2"); diff_L4_L3_BG = tfile_BG_01.Get("L4-L3")
 
-	signal_2TeV_ratio = tfile_2TeV_01.Get("L4_L1")
-	signal_4TeV_ratio = tfile_4TeV_01.Get("L4_L1")
-	bg_ratio = tfile_BG_01.Get("L4_L1")
-	signal_2TeV_diff = tfile_2TeV_004.Get("L4-L1")
-	signal_4TeV_diff = tfile_4TeV_004.Get("L4-L1")
-	bg_diff = tfile_BG_004.Get("L4-L1")
-	signal_2TeV_CSV = tfile_2TeV_01.Get("CSV")	
-	signal_4TeV_CSV = tfile_4TeV_01.Get("CSV")	
-	bg_CSV = tfile_BG_01.Get("CSV")	
-
-	#DrawHistograms([(bg_ratio,'background'),(signal_2TeV_ratio,'2TeV signal'),(signal_4TeV_ratio,'4TeV signal')], (0,10), 'L4_L1_Discriminant_Hist', 'L4/L1', '(a.u)', Save=True, Normalize=True, t_sleep=0)
-	#DrawHistograms([(bg_diff,'background'),(signal_2TeV_diff,'2TeV signal'),(signal_4TeV_diff,'4TeV signal')], (-22,22), 'L4-L1_Discriminant_Hist', 'L4-L1', '(a.u)', Save=True, Normalize=True, t_sleep=0)
-	#DrawHistograms([(bg_CSV,'background'),(signal_2TeV_CSV,'2TeV signal'),(signal_4TeV_CSV,'4TeV signal')], (0,1), 'CSV_Discriminant_Hist', 'p(b-jet)', '(a.u)', Save=True, Normalize=True, t_sleep=0)
+	DrawHistograms([(ratio_L2_L1_BG,'background'),(ratio_L2_L1_2TeV,'2TeV signal'),(ratio_L2_L1_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_ratio1', 'L2/L1', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(ratio_L3_L1_BG,'background'),(ratio_L3_L1_2TeV,'2TeV signal'),(ratio_L3_L1_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_ratio2', 'L3/L1', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(ratio_L4_L1_BG,'background'),(ratio_L4_L1_2TeV,'2TeV signal'),(ratio_L4_L1_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_ratio3', 'L4/L1', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(ratio_L3_L2_BG,'background'),(ratio_L3_L2_2TeV,'2TeV signal'),(ratio_L3_L2_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_ratio4', 'L3/L2', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(ratio_L4_L2_BG,'background'),(ratio_L4_L2_2TeV,'2TeV signal'),(ratio_L4_L2_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_ratio5', 'L4/L2', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(ratio_L4_L3_BG,'background'),(ratio_L4_L3_2TeV,'2TeV signal'),(ratio_L4_L3_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_ratio6', 'L4/L3', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(diff_L2_L1_BG,'background'),(diff_L2_L1_2TeV,'2TeV signal'),(diff_L2_L1_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_delta1', 'L2-L1', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(diff_L3_L1_BG,'background'),(diff_L3_L1_2TeV,'2TeV signal'),(diff_L3_L1_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_delta2', 'L3-L1', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(diff_L4_L1_BG,'background'),(diff_L4_L1_2TeV,'2TeV signal'),(diff_L4_L1_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_delta3', 'L4-L1', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(diff_L3_L2_BG,'background'),(diff_L3_L2_2TeV,'2TeV signal'),(diff_L3_L2_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_delta4', 'L3-L2', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(diff_L4_L2_BG,'background'),(diff_L4_L2_2TeV,'2TeV signal'),(diff_L4_L2_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_delta5', 'L4-L2', '(a.u)', Save=True, Normalize=True)
+	DrawHistograms([(diff_L4_L3_BG,'background'),(diff_L4_L3_2TeV,'2TeV signal'),(diff_L4_L3_4TeV,'4TeV signal')], (0,10), 'all_Discriminant_hists/Discriminant_Hist_delta6', 'L4-L3', '(a.u)', Save=True, Normalize=True)
 	'''
 	
 	#best ROC-curves global and single pT threshold (discriminant variables from above)
@@ -1895,7 +1930,7 @@ if __name__ == '__main__':
 	#DrawHistograms([(AllJets_thist,"all jets"), (ratio_thist, "L4/L1"), (diff_thist, "L4-L1"), (CSV_thist,"CSV")], (0,30), "tagged_jets_vs_decayvx", 'decay vertex R', "# jets", Save=True,Normalize=False)
 
 
-	#binned_exclusive_tagged_jets_hist("L4_L1_single_cut",Signal_4TeV_noPU, "L4/L1", [1.833], [0.66667], [0,2500], (0,2500), 60, Difference=False, mode="pT_jet", y_max = 1300, Save=True, Stacked=True, AllJets=AllJets_thist)
+#	binned_exclusive_tagged_jets_hist("L4_L1_single_cut",Signal_4TeV_noPU, "L4/L1", [1.833], [0.66667], [0,2500], (0,2500), 60, Difference=False, mode="pT_jet", y_max = 1300, Save=True, Stacked=True, AllJets=AllJets_thist)
 	#binned_exclusive_tagged_jets_hist("L4-L1_single_cut",Signal_4TeV_noPU, "L4-L1", [5], [0.66667], [0,2500], (0,2500), 60, Difference=True, mode="pT_jet", y_max = 1300, Save=True, Stacked=True, AllJets=AllJets_thist)
 	'''
 
@@ -1929,16 +1964,16 @@ if __name__ == '__main__':
 
 	cut_bins = [0, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250, 2500] #used for the pT-depending cuts
 	coarse_bins = [0,1200,1800,2500]	
-	'''
+	
 	#efficient_Make_Binned_ROC_histograms('Signal', Signal_both_noPU, cut_bins)    
         #efficient_Make_Binned_ROC_histograms('BG', Background_noPU, cut_bins)
 	
-	#FCM.find_cuts('Thesis_Plots/root_files/BG_binned_histograms.root',cut_bins)
+	#FCM.find_cuts('Thesis_Plots/root_files/BG_histograms.root', cut_bins, ZeroDiv_path="Thesis_Plots/root_files/BG_ZeroDiv.csv")
 
 	delta_cuts_noPU = [3, 5, 6, 6, 7, 8, 8, 9, 9]
         ratio_cuts_noPU = [1.833, 1.833, 2.0, 2.0, 2.0, 2.167, 2.167, 2.167, 2.167]
         CSV_cuts_noPU = [0.633, 0.65, 0.667, 0.683, 0.7, 0.717, 0.733, 0.767, 0.767]
-
+	'''
 	#efficient_binned_tagged_jets_hist([(Signal_both_noPU, "Signal",(0,2500))],"L4-L1", delta_cuts_noPU, CSV_cuts_noPU, cut_bins, 60, Difference=True, mode="pT_jet",Save=True)
         #efficient_binned_tagged_jets_hist([(Signal_both_noPU, "Signal",(0,2500))],"L4_L1", ratio_cuts_noPU, CSV_cuts_noPU, cut_bins, 60, Difference=False, mode="pT_jet",Save=True)
 	#efficient_binned_tagged_jets_hist([(Background_noPU, "BG",(0,2500))],"L4-L1", delta_cuts_noPU, CSV_cuts_noPU, cut_bins, 60, Difference=True, mode="pT_jet",Save=True)
@@ -1950,7 +1985,7 @@ if __name__ == '__main__':
         binned_tagged_ratio_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_SignalL4_L1.root")
 	binned_bg_tagged_diff_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_BGL4-L1.root")
         binned_bg_tagged_ratio_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_BGL4_L1.root")
-	binned_AllJets_thist = 		FCM.RebinHist(binned_tagged_diff_file.Get('Signal_AllJets'),"AllJets",plot_bins)		#binned_tagged_diff_file.Get('Signal_AllJets')	
+	binned_AllJets_thist = 		FCM.RebinHist(binned_tagged_diff_file.Get('Signal_AllJets'),"AllJets",plot_bins)			#binned_tagged_diff_file.Get('Signal_AllJets')		
         binned_CSV_thist = 		FCM.RebinHist(binned_tagged_diff_file.Get('Signal_CSV'),"CSV",plot_bins)                       	#binned_tagged_diff_file.Get('Signal_CSV')		
         binned_diff_thist = 		FCM.RebinHist(binned_tagged_diff_file.Get('Signal_Discriminant'),"L4-L1",plot_bins)            	#binned_tagged_diff_file.Get('Signal_Discriminant')	
         binned_ratio_thist = 		FCM.RebinHist(binned_tagged_ratio_file.Get('Signal_Discriminant'),"L4/L1",plot_bins)           	#binned_tagged_ratio_file.Get('Signal_Discriminant')	
@@ -1985,24 +2020,24 @@ if __name__ == '__main__':
 	
 	#efficient_Make_Binned_ROC_histograms('Signal_coarse-binned', Signal_both_noPU, coarse_bins)
         #efficient_Make_Binned_ROC_histograms('BG_coarse-binned', Background_noPU, coarse_bins)
-	Make_Binned_ROC_Curves('coarse_binned_ratio','Signal_coarse-binned','BG_coarse-binned',coarse_bins, diff=False,log=True, dR=0.1)
-	Make_Binned_ROC_Curves('coarse_binned_diff','Signal_coarse-binned','BG_coarse-binned',coarse_bins, diff=True,log=True, dR=0.04)
+	#Make_Binned_ROC_Curves('coarse_binned_ratio','Signal_coarse-binned','BG_coarse-binned',coarse_bins, diff=False,log=True, dR=0.1)
+	#Make_Binned_ROC_Curves('coarse_binned_diff','Signal_coarse-binned','BG_coarse-binned',coarse_bins, diff=True,log=True, dR=0.04)
 	'''	
-
-	#PU study of cut-based taggers
 	
-	#PU_histograms(Signal_2TeV_PU, Signal_4TeV_PU, Background_PU)	
+	#PU study of cut-based taggers
 	'''
+	#PU_histograms(Signal_2TeV_PU, Signal_4TeV_PU, Background_PU)	
+	
 	PU_file = rt.TFile.Open("Thesis_Plots/root_files/PU_distributions.root")
 	PU_2TeV = PU_file.Get("PU_2TeV"); PU_4TeV = PU_file.Get("PU_4TeV"); PU_BG = PU_file.Get("PU_BG")
-	DrawHistograms([(PU_BG,"Background"), (PU_2TeV,"2TeV Signal"), (PU_4TeV,"4TeV Signal")], (0,80), "PU_distributions", '#PV', "(a.u.)", Save=True,Normalize=True)
+	DrawHistograms([(PU_BG,"background"), (PU_2TeV,"2TeV signal"), (PU_4TeV,"4TeV signal")], (0,80), "PU_distributions", '#PV', "(a.u.)", Save=True,Normalize=True)
 	'''
 	cut_bins = [0, 500, 750, 1000, 1250, 1500, 1750, 2000, 2250, 2500] #used for the pT-depending cuts
 	'''
-	efficient_Make_Binned_ROC_histograms('Signal_PU_binned', Signal_both_PU, cut_bins)    
-        efficient_Make_Binned_ROC_histograms('BG_PU_binned', Background_PU, cut_bins)
+	efficient_Make_Binned_ROC_histograms('Signal_PU', Signal_both_PU, cut_bins)    
+        efficient_Make_Binned_ROC_histograms('BG_PU', Background_PU, cut_bins)
 
-	FCM.find_cuts('Thesis_Plots/root_files/BG_PU_binned_histograms.root',cut_bins)
+	FCM.find_cuts('Thesis_Plots/root_files/BG_PU_histograms.root',cut_bins, ZeroDiv_path = "Thesis_Plots/root_files/BG_PU_ZeroDiv.csv")
 	'''
 	delta_cuts_PU = [4, 5, 6, 7, 8, 8, 9, 9, 11]
         ratio_cuts_PU = [1.833, 2.0, 2.0, 2.167, 2.167, 2.167, 2.167, 2.167, 2.167]
@@ -2043,11 +2078,11 @@ if __name__ == '__main__':
 	'''
 
 	#comparison of different ANN models
-	'''
+	
 	from sklearn.metrics import roc_curve
 	import keras as kr
 	print "packages imported"
-	'''
+	
 	'''
 	#noPU
 	model_noPT = kr.models.load_model("Submitted_Models/model_noPU_functional.h5")
@@ -2061,7 +2096,7 @@ if __name__ == '__main__':
 	pT = np.load("Submitted_Models/data/noPU_both_withPT/test_feature.npy")
 	print "data loaded"
 	'''	
-	'''
+	
 	#withPU both
 	model_noPT = kr.models.load_model("Submitted_Models/model_withPU_functional.h5")
 	model_withPT = kr.models.load_model("Submitted_Models/model_withPU_functional_withPT.h5")
@@ -2074,7 +2109,7 @@ if __name__ == '__main__':
 	labels = np.load("Submitted_Models/data/withPU_both_withPT/test_y.npy")
 	pT = np.load("Submitted_Models/data/withPU_both_withPT/test_feature.npy")
 	print "data loaded"
-	'''
+	
 	'''	
 	pred_y = model.predict(ANN_functional_shape(x_data))
 	fpr, tpr, thr = roc_curve(np.array(labels),pred_y)
@@ -2085,17 +2120,17 @@ if __name__ == '__main__':
 	plt.legend(loc=3)
 	plt.show()
 	'''
-	'''
+	
 	signal_x_data = x_data[labels==1]
 	signal_pT = pT[labels==1]
 	signal_CSV = CSV[labels==1]
 	bg_x_data = x_data[labels==0]
 	bg_pT = pT[labels==0]
 	bg_CSV = CSV[labels==0]
-	'''	
-	'''
+		
+	
 	#noPU
-
+	'''
 	#print "noPT:"
 	#ANN_Make_Binned_ROC_histograms("Signal_ANN",model_noPT, signal_x_data, signal_pT, signal_CSV, cut_bins)
 	#ANN_Make_Binned_ROC_histograms("BG_ANN",model_noPT, bg_x_data, bg_pT, bg_CSV, cut_bins)
@@ -2126,11 +2161,9 @@ if __name__ == '__main__':
         binned_bg_ANN_noPT_thist =	FCM.RebinHist(bg_tagged_ANN_noPT_file.Get('BG_noPT_Discriminant'),"ANN",plot_bins) 					#bg_tagged_ANN_noPT_file.Get('BG_noPT_Discriminant')			
 	tagged_ANN_withPT_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_Signal_withPTANN.root")
 	bg_tagged_ANN_withPT_file = 	rt.TFile.Open("Thesis_Plots/root_files/binned_tagged_jets_vs_pT_jet_BG_withPTANN.root")
-	binned_ANN_withPT_thist = 	FCM.RebinHist(tagged_ANN_withPT_file.Get('Signal_withPT_Discriminant'),"ANN",plot_bins)			#tagged_ANN_withPT_file.Get('Signal_withPT_Discriminant')					
-	binned_bg_ANN_withPT_thist = 	FCM.RebinHist(bg_tagged_ANN_withPT_file.Get('BG_withPT_Discriminant'),"ANN",plot_bins) 			#bg_tagged_ANN_withPT_file.Get('BG_withPT_Discriminant')					
+	binned_ANN_withPT_thist = 	FCM.RebinHist(tagged_ANN_withPT_file.Get('Signal_withPT_Discriminant'),"ANN",plot_bins)			#tagged_ANN_withPT_file.Get('Signal_withPT_Discriminant')				
+	binned_bg_ANN_withPT_thist = 	FCM.RebinHist(bg_tagged_ANN_withPT_file.Get('BG_withPT_Discriminant'),"ANN",plot_bins) 			#bg_tagged_ANN_withPT_file.Get('BG_withPT_Discriminant')				
 	
-	#ANN_exclusive_tagged_jets_hist('Signal_ANN_noPT', model_noPT, signal_x_data, signal_pT, signal_CSV, ANN_noPT_cuts, CSV_cuts, cut_bins, (0,2500), 60, mode="pT_jet", y_max=230, Save=True)
-	#ANN_exclusive_tagged_jets_hist('Signal_ANN_withPT', model_withPT, signal_x_data, signal_pT, signal_CSV, ANN_withPT_cuts, CSV_cuts, cut_bins, (0,2500), 60, mode="pT_jet", y_max=230, Save=True,addFeature="pT")
 	#ANN_exclusive_tagged_jets_hist('Signal_ANN_noPT', model_noPT, signal_x_data, signal_pT, signal_CSV, ANN_noPT_cuts, CSV_cuts, cut_bins, (0,2500), 60, mode="pT_jet", y_max=870, Save=True, Stacked=True, AllJets=binned_AllJets_thist )
 	#ANN_exclusive_tagged_jets_hist('Signal_ANN_withPT', model_withPT, signal_x_data, signal_pT, signal_CSV, ANN_withPT_cuts, CSV_cuts, cut_bins, (0,2500), 60, mode="pT_jet", y_max=870, Save=True,addFeature="pT", Stacked=True, AllJets=binned_AllJets_thist )
 
@@ -2146,7 +2179,7 @@ if __name__ == '__main__':
 	#Make_Binned_ROC_Curves('binned_ANN_withPT','Signal_ANN_withPT','BG_ANN_withPT',coarse_bins, log=True, ANN=True)
 
 
-	Signal_compare, Background_compare = ANN_x_pT_CSV_label_to_clusterdata(x_data, pT, CSV, labels)
+	#Signal_compare, Background_compare = ANN_x_pT_CSV_label_to_clusterdata(x_data, pT, CSV, labels)
 
 	#efficient_Make_Binned_ROC_histograms('Signal_compare', Signal_compare, cut_bins)    
         #efficient_Make_Binned_ROC_histograms('BG_compare', Background_compare, cut_bins)
@@ -2165,16 +2198,15 @@ if __name__ == '__main__':
         binned_ratio_thist = 		FCM.RebinHist(compare_tagged_ratio_file.Get('Signal_compare_Discriminant'),"L4/L1",plot_bins)	#compare_tagged_ratio_file.Get('Signal_compare_Discriminant')		
         binned_bg_ratio_thist = 	FCM.RebinHist(compare_bg_tagged_ratio_file.Get('BG_compare_Discriminant'),"L4/L1",plot_bins)   #compare_bg_tagged_ratio_file.Get('BG_compare_Discriminant')	        
 
-	#Efficiency_vs_pT("Signal_ANN_noPT_vs_withPT_vs_L4_L1",[(binned_ANN_noPT_thist,"ANN without p_{T}",3),(binned_ANN_withPT_thist,"ANN with p_{T}",6),(binned_ratio_thist,"L4/L1",2),(binned_CSV_thist,"CSV",4)], binned_AllJets_thist, 0.7, Save=True,legend_shift=True)
-        #Efficiency_vs_pT("Background_ANN_noPT_vs_withPT_vs_L4_L1",[(binned_bg_ANN_noPT_thist,"ANN without p_{T}",3),(binned_bg_ANN_withPT_thist,"ANN with p_{T}",6),(binned_bg_ratio_thist,"L4/L1",2),(binned_bg_CSV_thist,"CSV",4)], binned_bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True)
+	Efficiency_vs_pT("Signal_ANN_noPT_vs_withPT_vs_L4_L1",[(binned_ANN_noPT_thist,"ANN without p_{T}",3),(binned_ANN_withPT_thist,"ANN with p_{T}",6),(binned_ratio_thist,"L4/L1",2),(binned_CSV_thist,"CSV",4)], binned_AllJets_thist, 0.7, Save=True,legend_shift=True)
+        Efficiency_vs_pT("Background_ANN_noPT_vs_withPT_vs_L4_L1",[(binned_bg_ANN_noPT_thist,"ANN without p_{T}",3),(binned_bg_ANN_withPT_thist,"ANN with p_{T}",6),(binned_bg_ratio_thist,"L4/L1",2),(binned_bg_CSV_thist,"CSV",4)], binned_bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True)
 
 	#DrawHistograms([(binned_AllJets_thist,"all jets"), (binned_ANN_noPT_thist, "ANN without p_{T}"),(binned_ANN_withPT_thist, "ANN with p_{T}"),(binned_ratio_thist, "L4/L1"),(binned_CSV_thist,"CSV")], (0,2500), "ANN_noPT_vs_withPT_vs_L4_L1_tagged_jets_vs_pT_binned", 'jet p_{T} (GeV)', "# jets", Save=True,Normalize=False)
-	'''	
+		
 	
-
 	#Relative_Gain_Plots_ANN()
-
 	'''
+	
 	#PU study of ANNs
 
 	#print "noPT:"
@@ -2238,11 +2270,11 @@ if __name__ == '__main__':
         #Efficiency_vs_pT("Background_PU_ANN_noPT_vs_withPT_vs_withPV_vs_L4_L1",[(binned_bg_ANN_noPT_thist,"ANN without p_{T}/PV",3),(binned_bg_ANN_withPT_thist,"ANN with p_{T}",6),(binned_bg_ANN_withPV_thist,"ANN with PV",7),(binned_bg_ratio_thist,"L4/L1",2),(binned_bg_CSV_thist,"CSV",4)], binned_bg_AllJets_thist, 0.3, Save=True,legend_shift=False, BG=True, LargeLegend=True)
 
 
-	#ANN_efficiency_vs_PU_pT_PV("ANN_noPT_vs_withPT_vs_withPV_vs_L4_L1", signal_x_data, signal_pT, signal_CSV, model_noPT, model_withPT, model_withPV, ANN_noPT_cuts, ANN_withPT_cuts, ANN_withPV_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.7, pT_Cut=200, BG=False)
-	#ANN_efficiency_vs_PU_pT_PV("ANN_noPT_vs_withPT_vs_withPV_vs_L4_L1_BG", bg_x_data, bg_pT, bg_CSV, model_noPT, model_withPT, model_withPV, ANN_noPT_cuts, ANN_withPT_cuts, ANN_withPV_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.3, pT_Cut=200, BG=True)
+	ANN_efficiency_vs_PU_pT_PV("ANN_noPT_vs_withPT_vs_withPV_vs_L4_L1", signal_x_data, signal_pT, signal_CSV, model_noPT, model_withPT, model_withPV, ANN_noPT_cuts, ANN_withPT_cuts, ANN_withPV_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.7, pT_Cut=200, BG=False)
+	ANN_efficiency_vs_PU_pT_PV("ANN_noPT_vs_withPT_vs_withPV_vs_L4_L1_BG", bg_x_data, bg_pT, bg_CSV, model_noPT, model_withPT, model_withPV, ANN_noPT_cuts, ANN_withPT_cuts, ANN_withPV_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.3, pT_Cut=200, BG=True)
 	#ANN_efficiency_vs_PU_pT_PV("ANN_noPT_vs_withPT_vs_withPV_vs_L4_L1", signal_x_data, signal_pT, signal_CSV, model_noPT, model_withPT, model_withPV, ANN_noPT_cuts, ANN_withPT_cuts, ANN_withPV_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.7, pT_Cut=1200, BG=False)
 	#ANN_efficiency_vs_PU_pT_PV("ANN_noPT_vs_withPT_vs_withPV_vs_L4_L1_BG", bg_x_data, bg_pT, bg_CSV, model_noPT, model_withPT, model_withPV, ANN_noPT_cuts, ANN_withPT_cuts, ANN_withPV_cuts, ratio_cuts, CSV_cuts, cut_bins, 0.3, pT_Cut=1200, BG=True)
-	'''
+	
 
 	
 	

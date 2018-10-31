@@ -11,7 +11,7 @@ from ClusterMatcher import *
 
 #Main function:
 
-def TrackMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, Axes=None, Save=False, dR_dist = False, EarlyBreak=0):
+def TrackMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, Axes=None, Save=False, dR_dist = False, EarlyBreak=0, manual_selection = False):
 	"""returns unique ID, vertices and 3-momenta of all tracks that lie inside the dR-cone of a b-particle trajectory; optionally it returns also a 3D-plot
 		
 
@@ -25,7 +25,8 @@ def TrackMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, 
 		Save:			if set as True, the function will save the data to a .pkl file for later use
 		dR_dist:		if set as True, the function will return a histrogram showing the distribution of delta R between pixel clusters and the corresponding trajectory
 		EarlyBreak:             non zero integer which denotes the number of events after which the algorithm should stop
-
+		manual_selection:	optional input: tuple (nEvent,nParticle) for selecting a specific event
+	
 	Outputs:
 		list of tuples where each contains a tuple with a unique identification followed by the cartesian coordinates of the vertex and then the momentum vector: ((nEvent,nParticle,nTrack),(vx_x,vx_y,vx_z),(px,py,pz))
 		"""
@@ -45,12 +46,23 @@ def TrackMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, 
 	for i in xrange(N):
     		if i % 50 == 0: print "Working on event " ,i
 		if EarlyBreak >0 and i >= EarlyBreak: break
+		if manual_selection != False:
+			if i < manual_selection[0]: 
+				continue
+			elif i > manual_selection[0]:
+				break
     		tree.GetEntry(i)
-    		
+
 		for j in range(0,tree.nJets):
         		jVector = rt.TLorentzVector()
         		jVector.SetPtEtaPhiM(tree.jet_pt[j],tree.jet_eta[j],tree.jet_phi[j],tree.jet_mass[j])
         		for k in range(0,tree.nGenParticles):
+				if manual_selection != False:
+					if k < manual_selection[1]: 
+						continue
+					elif k > manual_selection[1]:
+						break
+
 				if HadronsNotQuarks == False:
 					pdgCriterion = abs(tree.genParticle_pdgId[k]) == 5
 					statusCriterion = tree.genParticle_status[k] == 23
@@ -70,7 +82,9 @@ def TrackMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, 
                         			phi = PolarPhi(v_p[0],v_p[1])
 						theta = Theta(v_p[0],v_p[1],v_p[2])
 						eta = Eta(theta)
-					
+						if np.sqrt(tree.genParticle_decayvx_x[k]**2 + tree.genParticle_decayvx_y[k]**2) > 4:
+							print "happens at event nr {}, particle nr {}".format(i, k)
+
 						if Plot == True:    
 							t_max = TrajectoryLength(theta,v_p)
 							PlotTrajectory((tree.genParticle_vx_x[k],tree.genParticle_vx_y[k],tree.genParticle_vx_z[k]),v_p,Axes,t_max,res,color[c],1,'--')
@@ -94,8 +108,10 @@ def TrackMatch(file, dR, MomentumThreshold, HadronsNotQuarks=False, Plot=False, 
 						else:
 							MatchedTracks.append(NearTracks) 
                         				if Plot == True:
+								
 								for entry in NearTracks:
 									PlotTrajectory(entry[1],entry[2],Axes,0.7*t_max,res,color[c],0.5,'-')
+								Axes.scatter(tree.genParticle_decayvx_x[k],tree.genParticle_decayvx_y[k],tree.genParticle_decayvx_z[k], color='black',s=25)
 						if Plot == True:
 							if c != len(color)-1:
                         					c += 1
@@ -137,11 +153,13 @@ if __name__ == '__main__':
 	#	MatchedTracks = pickle.load(f)
 
 
-
+	
 	'''
+	Signal_4TeV_noPU_String = 'root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/ZprimeToBBbar_M_4000/btagHits_noPU/180628_092048/0000/flatTuple_{}.root'
+	file = rt.TFile.Open(Signal_4TeV_noPU_String.format(20))
 	tree = file.Get("demo/tree")
 	N = tree.GetEntries()
-	ax = Initialize3DPlot('B-Hadron Evolution', 'x', 'y', 'z', grid=False, tree=tree)	
+	ax = Initialize3DPlot('B-Hadron Evolution', 'x', 'y', 'z', grid=None )	
 	tree.GetEntry(0)
 	#particle = tree.genParticle[0]
 	#import pdb; pdb.set_trace()
@@ -189,8 +207,8 @@ if __name__ == '__main__':
 	ax.set_ylim3d(-1.15)
 	ax.set_zlim3d(0,25)
 	plt.show()
-	
 	'''
+	
 
 	'''27, 6: 27, 9: 195, 5'''
 

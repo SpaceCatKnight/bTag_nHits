@@ -1,0 +1,17 @@
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_10.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_13.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_15.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_19.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_20.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_25.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_27.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_2.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_33.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_35.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_37.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_39.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_3.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_41.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_4.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_7.root
+root://t3se01.psi.ch:1094/pnfs/psi.ch/cms/trivcat/store/user/thaarres/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8/QCD_Pt-15to3000_TuneCUETP8M1_Flat_13TeV_pythia8_noPU/180417_143831/0000/flatTuple_8.root

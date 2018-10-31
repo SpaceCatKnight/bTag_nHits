@@ -771,9 +771,9 @@ def exclusive_tagged_jets_hist(signal_title, data, discriminant, dR, discriminan
 
 def RebinHist(hist,name):
 	"""Rebins an efficiency-vs-pT histogram such that the lower statistics at high pT are taken into account"""
-		import array
-		bins_ = array.array('d',[350.0, 387.5, 425.0, 462.5, 500.0, 537.5, 575.0, 612.5, 650.0, 687.5, 725.0, 762.5, 800.0, 837.5, 875.0, 912.5, 950.0, 987.5, 1025.0, 1100.0, 1200.0, 1400.0, 1600.0, 1800.0, 2100.0, 2500.0, 3000.0])
-		return 	hist.Rebin(len(bins_)-1,"rebinned_"+name,bins_)
+	import array
+	bins_ = array.array('d',[350.0, 387.5, 425.0, 462.5, 500.0, 537.5, 575.0, 612.5, 650.0, 687.5, 725.0, 762.5, 800.0, 837.5, 875.0, 912.5, 950.0, 987.5, 1025.0, 1100.0, 1200.0, 1400.0, 1600.0, 1800.0, 2100.0, 2500.0, 3000.0])
+	return 	hist.Rebin(len(bins_)-1,"rebinned_"+name,bins_)
 
 def Efficiency_vs_pT(title,histlist, hist_all_jets,y_max, feature,Save=False,legend_shift=False):
 	"""plots for each histogram of tagged jets given in a list of tuples (histogram, title) the efficiency for each bin, where the x-axis corresponds to the feature given as string (see FeatureDict)."""
